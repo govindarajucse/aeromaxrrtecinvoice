@@ -239,7 +239,7 @@ function seedDatabase() {
       goodsService: 'Service',
       cgstRate: 9,
       sgstRate: 9,
-      igstRate: 18,
+      igstRate: 0,
       dueDate: '2026-03-04',
       status: 'Sent',
       notes: 'Tax Invoice - AEROMAXRR TEC Manufacturing Services',
