@@ -3,6 +3,7 @@ import InvoiceList from './components/InvoiceList'
 import InvoiceForm from './components/InvoiceForm'
 import CompanyForm from './components/CompanyForm'
 import ServiceForm from './components/ServiceForm'
+import LoginForm from './components/LoginForm'
 
 const API_URL = '/api'
 
@@ -14,6 +15,8 @@ export function formatINR(amount) {
 }
 
 function App() {
+  const [token, setToken] = useState(localStorage.getItem('auth_token'))
+  const [user, setUser] = useState(JSON.parse(localStorage.getItem('auth_user')))
   const [invoices, setInvoices] = useState([])
   const [showForm, setShowForm] = useState(false)
   const [editingInvoice, setEditingInvoice] = useState(null)
@@ -26,17 +29,50 @@ function App() {
   const [services, setServices] = useState([])
   const [showServicesModal, setShowServicesModal] = useState(false)
 
-  // Load invoices, logo, companies and services from API on mount
+  // Helper for authenticated requests
+  const authFetch = async (url, options = {}) => {
+    const headers = {
+      ...options.headers,
+      'Authorization': `Bearer ${token}`
+    }
+    
+    const response = await fetch(url, { ...options, headers })
+    
+    if (response.status === 401 || response.status === 403) {
+      handleLogout()
+      throw new Error('Session expired. Please log in again.')
+    }
+    
+    return response
+  }
+
+  // Load data on mount or when token changes
   useEffect(() => {
-    fetchInvoices()
-    fetchLogo()
-    fetchCompanies()
-    fetchServices()
-  }, [])
+    if (token) {
+      fetchInvoices()
+      fetchLogo()
+      fetchCompanies()
+      fetchServices()
+    }
+  }, [token])
+
+  const handleLogin = (newToken, newUser) => {
+    setToken(newToken)
+    setUser(newUser)
+    localStorage.setItem('auth_token', newToken)
+    localStorage.setItem('auth_user', JSON.stringify(newUser))
+  }
+
+  const handleLogout = () => {
+    setToken(null)
+    setUser(null)
+    localStorage.removeItem('auth_token')
+    localStorage.removeItem('auth_user')
+  }
 
   const fetchServices = async () => {
     try {
-      const response = await fetch(`${API_URL}/services`)
+      const response = await authFetch(`${API_URL}/services`)
       if (response.ok) {
         const data = await response.json()
         setServices(data)
@@ -50,7 +86,7 @@ function App() {
     try {
       const method = service.id ? 'PUT' : 'POST'
       const url = service.id ? `${API_URL}/services/${service.id}` : `${API_URL}/services`
-      const response = await fetch(url, {
+      const response = await authFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(service)
@@ -66,7 +102,7 @@ function App() {
 
   const handleServiceDelete = async (id) => {
     try {
-      const response = await fetch(`${API_URL}/services/${id}`, { method: 'DELETE' })
+      const response = await authFetch(`${API_URL}/services/${id}`, { method: 'DELETE' })
       if (!response.ok) throw new Error('Failed to delete service')
       await fetchServices()
       setShowServicesModal(false)
@@ -78,7 +114,7 @@ function App() {
 
   const fetchCompanies = async () => {
     try {
-      const response = await fetch(`${API_URL}/companies`)
+      const response = await authFetch(`${API_URL}/companies`)
       if (response.ok) {
         const data = await response.json()
         setCompanies(data)
@@ -92,7 +128,7 @@ function App() {
     try {
       const method = company.id ? 'PUT' : 'POST'
       const url = company.id ? `${API_URL}/companies/${company.id}` : `${API_URL}/companies`
-      const response = await fetch(url, {
+      const response = await authFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(company)
@@ -108,7 +144,7 @@ function App() {
 
   const handleCompanyDelete = async (id) => {
     try {
-      const response = await fetch(`${API_URL}/companies/${id}`, { method: 'DELETE' })
+      const response = await authFetch(`${API_URL}/companies/${id}`, { method: 'DELETE' })
       if (!response.ok) throw new Error('Failed to delete company')
       await fetchCompanies()
       setShowCompaniesModal(false)
@@ -120,7 +156,7 @@ function App() {
 
   const fetchLogo = async () => {
     try {
-      const response = await fetch(`${API_URL}/logo`)
+      const response = await authFetch(`${API_URL}/logo`)
       if (response.ok) {
         const data = await response.json()
         setLogoUrl(data.logoUrl || null)
@@ -135,7 +171,7 @@ function App() {
     try {
       setLoading(true)
       setError(null)
-      const response = await fetch(`${API_URL}/invoices`)
+      const response = await authFetch(`${API_URL}/invoices`)
       if (!response.ok) throw new Error('Failed to fetch invoices')
       const data = await response.json()
       setInvoices(data)
@@ -149,7 +185,7 @@ function App() {
 
   const handleAddInvoice = async (invoice) => {
     try {
-      const response = await fetch(`${API_URL}/invoices`, {
+      const response = await authFetch(`${API_URL}/invoices`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(invoice)
@@ -165,7 +201,7 @@ function App() {
 
   const handleUpdateInvoice = async (updatedInvoice) => {
     try {
-      const response = await fetch(`${API_URL}/invoices/${updatedInvoice.id}`, {
+      const response = await authFetch(`${API_URL}/invoices/${updatedInvoice.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedInvoice)
@@ -182,7 +218,7 @@ function App() {
 
   const handleDeleteInvoice = async (id) => {
     try {
-      const response = await fetch(`${API_URL}/invoices/${id}`, {
+      const response = await authFetch(`${API_URL}/invoices/${id}`, {
         method: 'DELETE'
       })
       if (!response.ok) throw new Error('Failed to delete invoice')
@@ -195,7 +231,7 @@ function App() {
 
   const handleUpdateStatus = async (id, status) => {
     try {
-      const response = await fetch(`${API_URL}/invoices/${id}/status`, {
+      const response = await authFetch(`${API_URL}/invoices/${id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status })
@@ -222,7 +258,7 @@ function App() {
     try {
       const formData = new FormData()
       formData.append('logo', file)
-      const response = await fetch(`${API_URL}/logo/upload`, {
+      const response = await authFetch(`${API_URL}/logo/upload`, {
         method: 'POST',
         body: formData
       })
@@ -233,7 +269,6 @@ function App() {
           const errorData = await response.json()
           errorMsg = errorData.error || errorMsg
         } catch (e) {
-          // If not JSON, use default or status text
           errorMsg = response.statusText || errorMsg
         }
         throw new Error(errorMsg)
@@ -250,7 +285,7 @@ function App() {
 
   const handleDownloadReport = async () => {
     try {
-      const response = await fetch(`${API_URL}/invoices/export/report`)
+      const response = await authFetch(`${API_URL}/invoices/export/report`)
       if (!response.ok) throw new Error('Failed to download report')
       
       const blob = await response.blob()
@@ -266,44 +301,53 @@ function App() {
     }
   }
 
+  if (!token) {
+    return <LoginForm onLogin={handleLogin} />
+  }
+
   return (
     <div className="app">
       <header className="app-header">
         <div className="header-content">
-          {logoUrl ? (
-            <img src={logoUrl} alt="Company Logo" className="company-logo" />
-          ) : (
-            <div className="logo-placeholder">📋</div>
-          )}
-          <h1>{companies.length > 0 ? `${companies[0].name} ` : ''}</h1>
-          <div className="header-actions" style={{ display: 'flex', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            {logoUrl ? (
+              <img src={logoUrl} alt="Company Logo" className="company-logo" />
+            ) : (
+              <div className="logo-placeholder">📋</div>
+            )}
+            <div>
+              <h1>{companies.length > 0 ? `${companies[0].name} ` : 'Invoice Manager'}</h1>
+              <span className="user-badge">👤 {user?.username}</span>
+            </div>
+          </div>
+          <div className="header-actions" style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
             <button 
               className="btn btn-secondary"
               onClick={() => setShowServicesModal(true)}
               title="Manage Services"
             >
-              🛠️ Manage Services
+              🛠️ Services
             </button>
             <button 
               className="btn btn-secondary"
               onClick={() => setShowCompaniesModal(true)}
               title="Manage Companies"
             >
-              🏢 Manage Companies
+              🏢 Companies
             </button>
             <button 
               className="btn btn-secondary"
               onClick={handleDownloadReport}
               title="Download Excel Report"
             >
-              📊 Download Report
+              📊 Report
             </button>
             <button 
               className="btn btn-secondary"
               onClick={() => setShowLogoUpload(!showLogoUpload)}
               title={logoUrl ? "Change logo" : "Upload logo"}
             >
-              {logoUrl ? '📁 Change Logo' : '📁 Upload Logo'}
+              📁 Logo
             </button>
             <button 
               className="btn btn-primary"
@@ -313,6 +357,14 @@ function App() {
               }}
             >
               ➕ New Invoice
+            </button>
+            <button 
+              className="btn btn-danger"
+              onClick={handleLogout}
+              title="Sign Out"
+              style={{ padding: '8px 12px', fontSize: '18px' }}
+            >
+              🚪
             </button>
           </div>
         </div>
@@ -359,11 +411,12 @@ function App() {
           </div>
         )}
 
-        {loading && <div className="loading-spinner">Loading invoices...</div>}
+        {loading && <div className="loading-spinner">Loading dashboard layer...</div>}
 
         {showForm && (
           <InvoiceForm
             invoice={editingInvoice}
+            token={token}
             onSubmit={editingInvoice ? handleUpdateInvoice : handleAddInvoice}
             onCancel={handleCloseForm}
           />
@@ -372,6 +425,7 @@ function App() {
         {!loading && (
           <InvoiceList
             invoices={invoices}
+            token={token}
             onEdit={handleEditInvoice}
             onDelete={handleDeleteInvoice}
             onStatusChange={handleUpdateStatus}
@@ -396,6 +450,24 @@ function App() {
           onClose={() => setShowServicesModal(false)}
         />
       )}
+      
+      <style jsx>{`
+        .user-badge {
+          font-size: 12px;
+          color: rgba(255, 255, 255, 0.5);
+          display: block;
+          margin-top: -4px;
+        }
+        .btn-danger {
+          background: rgba(239, 68, 68, 0.1);
+          border: 1px solid rgba(239, 68, 68, 0.2);
+          color: #ef4444;
+        }
+        .btn-danger:hover {
+          background: #ef4444;
+          color: white;
+        }
+      `}</style>
     </div>
   )
 }

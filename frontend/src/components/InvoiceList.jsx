@@ -1,7 +1,7 @@
 import React from 'react'
 import InvoiceItem from './InvoiceItem'
 
-function InvoiceList({ invoices, onEdit, onDelete, onStatusChange }) {
+function InvoiceList({ invoices, token, onEdit, onDelete, onStatusChange }) {
   if (invoices.length === 0) {
     return (
       <div className="empty-state">
@@ -31,6 +31,7 @@ function InvoiceList({ invoices, onEdit, onDelete, onStatusChange }) {
             <InvoiceItem
               key={invoice.id}
               invoice={invoice}
+              token={token}
               onEdit={onEdit}
               onDelete={onDelete}
               onStatusChange={onStatusChange}

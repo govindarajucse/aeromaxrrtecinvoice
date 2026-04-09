@@ -34,7 +34,7 @@ function ConfirmModal({ open, onConfirm, onCancel, message }) {
 }
 import { formatINR } from '../App'
 
-function InvoiceItem({ invoice, onEdit, onDelete, onStatusChange }) {
+function InvoiceItem({ invoice, token, onEdit, onDelete, onStatusChange }) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showNotes, setShowNotes] = useState(false)
   const [downloading, setDownloading] = useState(null)
@@ -56,7 +56,11 @@ function InvoiceItem({ invoice, onEdit, onDelete, onStatusChange }) {
   const handleDownload = async (format) => {
     try {
       setDownloading(format)
-      const response = await fetch(`http://localhost:9999/api/invoices/${invoice.id}/export/${format}`)
+      const response = await fetch(`/api/invoices/${invoice.id}/export/${format}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
       if (!response.ok) throw new Error('Download failed')
 
       const blob = await response.blob()

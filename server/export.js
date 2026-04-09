@@ -381,7 +381,9 @@ export function generatePDF(invoice) {
       let sigHeight = 84;
 
       const halfW = contentWidth / 2;
-      doc.rect(margin, y, contentWidth, sigHeight).stroke();
+      // Top divider line for signature section
+      doc.moveTo(margin, y).lineTo(margin + contentWidth, y).stroke();
+      // Middle vertical separator
       doc.moveTo(margin + halfW, y).lineTo(margin + halfW, y + sigHeight).stroke();
       // Jurisdiction
       doc.font('Helvetica').text('Subject to Bangalore Jurisdiction', margin + 8, y + 8, { width: halfW - 16, align: 'center' });

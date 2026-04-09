@@ -119,6 +119,16 @@ export async function initializeDatabase() {
     )
   `)
 
+  // Create users table for authentication
+  db.run(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      username TEXT UNIQUE NOT NULL,
+      password TEXT NOT NULL,
+      role TEXT DEFAULT 'admin'
+    )
+  `)
+
   saveDatabase()
   return db
 }
@@ -128,6 +138,59 @@ function saveDatabase() {
   const data = db.export()
   const buffer = Buffer.from(data)
   fs.writeFileSync(dbPath, buffer)
+}
+
+// User operations
+export const userDB = {
+  findByUsername(username) {
+    try {
+      const stmt = db.prepare('SELECT * FROM users WHERE username = ?')
+      stmt.bind([username])
+      if (stmt.step()) {
+        const user = stmt.getAsObject()
+        stmt.free()
+        return user
+      }
+      stmt.free()
+      return null
+    } catch (error) {
+      console.error('Error in findByUsername:', error)
+      return null
+    }
+  },
+
+  getAll() {
+    try {
+      const results = []
+      const stmt = db.prepare('SELECT * FROM users')
+      while (stmt.step()) {
+        results.push(stmt.getAsObject())
+      }
+      stmt.free()
+      return results
+    } catch (error) {
+      console.error('Error in getAll users:', error)
+      return []
+    }
+  },
+
+  create(user) {
+    try {
+      const { id, username, password, role } = user
+      const stmt = db.prepare(`
+        INSERT INTO users (id, username, password, role)
+        VALUES (?, ?, ?, ?)
+      `)
+      stmt.bind([id || Date.now().toString(), username, password, role || 'admin'])
+      stmt.step()
+      stmt.free()
+      saveDatabase()
+      return { id, username, role }
+    } catch (error) {
+      console.error('Error in create user:', error)
+      throw error
+    }
+  }
 }
 
 // Line Items operations

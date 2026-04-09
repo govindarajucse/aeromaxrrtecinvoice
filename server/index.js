@@ -4,11 +4,33 @@ import multer from 'multer'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import { readdirSync, existsSync, mkdirSync } from 'fs'
-import { invoiceDB, companyDB, serviceDB, initializeDatabase } from './db.js'
+import jwt from 'jsonwebtoken'
+import bcrypt from 'bcryptjs'
+import { invoiceDB, companyDB, serviceDB, userDB, initializeDatabase } from './db.js'
 import { generatePDF, generateExcel, generateReportExcel } from './export.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
+
+const JWT_SECRET = process.env.JWT_SECRET || 'aeromaxrr-secret-key-2026'
+
+// Authentication Middleware
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization']
+  const token = authHeader && authHeader.split(' ')[1]
+
+  if (!token) {
+    return res.status(401).json({ error: 'Access denied. No token provided.' })
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ error: 'Invalid or expired token.' })
+    }
+    req.user = user
+    next()
+  })
+}
 
 // Ensure public/logos directory exists
 const logosDir = join(__dirname, 'public', 'logos')
@@ -57,12 +79,37 @@ app.use(express.static(join(__dirname, 'public')))
 // Initialize database on startup
 let dbReady = false
 
+async function seedUser() {
+  try {
+    const users = userDB.getAll()
+    if (users.length === 0) {
+      console.log('--- Initial Setup: Seeding Default User ---')
+      const salt = await bcrypt.genSalt(10)
+      const hashedPassword = await bcrypt.hash('adminpassword', salt)
+      userDB.create({
+        id: 'admin',
+        username: 'admin',
+        password: hashedPassword,
+        role: 'admin'
+      })
+      console.log('✓ Default admin user created')
+      console.log('  Username: admin')
+      console.log('  Password: adminpassword')
+      console.log('-------------------------------------------')
+    }
+  } catch (error) {
+    console.error('Error seeding user:', error)
+  }
+}
+
 async function startServer() {
   try {
     await initializeDatabase()
     dbReady = true
     console.log('✓ Database initialized')
-    seedDatabase()
+    
+    // Seed default admin user if none exists
+    await seedUser()
 
     app.listen(PORT, () => {
       console.log(`\n✓ Invoice API Server`)
@@ -151,9 +198,63 @@ function seedDatabase() {
 
 // Routes
 
+// --- AUTH API ---
+
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { username, password } = req.body
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password are required' })
+    }
+
+    const existingUser = userDB.findByUsername(username)
+    if (existingUser) {
+      return res.status(400).json({ error: 'Username already exists' })
+    }
+
+    const salt = await bcrypt.genSalt(10)
+    const hashedPassword = await bcrypt.hash(password, salt)
+
+    const user = userDB.create({
+      id: Date.now().toString(),
+      username,
+      password: hashedPassword,
+      role: 'admin'
+    })
+
+    res.status(201).json({ message: 'User registered successfully', username: user.username })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { username, password } = req.body
+    const user = userDB.findByUsername(username)
+
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid credentials' })
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password)
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Invalid credentials' })
+    }
+
+    const payload = { id: user.id, username: user.username, role: user.role }
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '12h' })
+
+    res.json({ token, user: { username: user.username, role: user.role } })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
+
 // --- COMPANIES API ---
 
-app.get('/api/companies', (req, res) => {
+app.get('/api/companies', authenticateToken, (req, res) => {
   try {
     const companies = companyDB.getAll()
     res.json(companies)
@@ -162,7 +263,7 @@ app.get('/api/companies', (req, res) => {
   }
 })
 
-app.post('/api/companies', (req, res) => {
+app.post('/api/companies', authenticateToken, (req, res) => {
   try {
     const { name, address } = req.body
     if (!name || !address) {
@@ -175,7 +276,7 @@ app.post('/api/companies', (req, res) => {
   }
 })
 
-app.put('/api/companies/:id', (req, res) => {
+app.put('/api/companies/:id', authenticateToken, (req, res) => {
   try {
     const company = companyDB.getById(req.params.id)
     if (!company) {
@@ -188,7 +289,7 @@ app.put('/api/companies/:id', (req, res) => {
   }
 })
 
-app.delete('/api/companies/:id', (req, res) => {
+app.delete('/api/companies/:id', authenticateToken, (req, res) => {
   try {
     const company = companyDB.getById(req.params.id)
     if (!company) {
@@ -204,7 +305,7 @@ app.delete('/api/companies/:id', (req, res) => {
 
 // --- SERVICE MASTER API ---
 
-app.get('/api/services', (req, res) => {
+app.get('/api/services', authenticateToken, (req, res) => {
   try {
     const services = serviceDB.getAll()
     res.json(services)
@@ -213,7 +314,7 @@ app.get('/api/services', (req, res) => {
   }
 })
 
-app.post('/api/services', (req, res) => {
+app.post('/api/services', authenticateToken, (req, res) => {
   try {
     const created = serviceDB.create(req.body)
     res.status(201).json(created)
@@ -222,7 +323,7 @@ app.post('/api/services', (req, res) => {
   }
 })
 
-app.put('/api/services/:id', (req, res) => {
+app.put('/api/services/:id', authenticateToken, (req, res) => {
   try {
     const updated = serviceDB.update(req.params.id, req.body)
     res.json(updated)
@@ -231,7 +332,7 @@ app.put('/api/services/:id', (req, res) => {
   }
 })
 
-app.delete('/api/services/:id', (req, res) => {
+app.delete('/api/services/:id', authenticateToken, (req, res) => {
   try {
     serviceDB.delete(req.params.id)
     res.status(204).send()
@@ -244,7 +345,7 @@ app.delete('/api/services/:id', (req, res) => {
 // --- INVOICES API ---
 
 // GET all invoices
-app.get('/api/invoices', (req, res) => {
+app.get('/api/invoices', authenticateToken, (req, res) => {
   try {
     const invoices = invoiceDB.getAll()
     res.json(invoices)
@@ -254,7 +355,7 @@ app.get('/api/invoices', (req, res) => {
 })
 
 // GET single invoice
-app.get('/api/invoices/:id', (req, res) => {
+app.get('/api/invoices/:id', authenticateToken, (req, res) => {
   try {
     const invoice = invoiceDB.getById(req.params.id)
     if (!invoice) {
@@ -267,7 +368,7 @@ app.get('/api/invoices/:id', (req, res) => {
 })
 
 // CREATE invoice
-app.post('/api/invoices', (req, res) => {
+app.post('/api/invoices', authenticateToken, (req, res) => {
   try {
     const { number, clientName, clientAddress, clientGSTN, dcNumber, poNumber, goodsService, cgstRate, sgstRate, igstRate, dueDate, status = 'Draft', notes = '', lineItems = [], roundOff = 0, companyName = '', companyAddress = '', companyGSTN = '', companyEmail = '' } = req.body
 
@@ -307,7 +408,7 @@ app.post('/api/invoices', (req, res) => {
 })
 
 // UPDATE invoice
-app.put('/api/invoices/:id', (req, res) => {
+app.put('/api/invoices/:id', authenticateToken, (req, res) => {
   try {
     const invoice = invoiceDB.getById(req.params.id)
     if (!invoice) {
@@ -332,7 +433,7 @@ app.put('/api/invoices/:id', (req, res) => {
 })
 
 // UPDATE invoice status
-app.patch('/api/invoices/:id/status', (req, res) => {
+app.patch('/api/invoices/:id/status', authenticateToken, (req, res) => {
   try {
     const { status } = req.body
     if (!status) {
@@ -352,7 +453,7 @@ app.patch('/api/invoices/:id/status', (req, res) => {
 })
 
 // DELETE invoice
-app.delete('/api/invoices/:id', (req, res) => {
+app.delete('/api/invoices/:id', authenticateToken, (req, res) => {
   try {
     const invoice = invoiceDB.getById(req.params.id)
     if (!invoice) {
@@ -367,7 +468,7 @@ app.delete('/api/invoices/:id', (req, res) => {
 })
 
 // EXPORT invoice as PDF
-app.get('/api/invoices/:id/export/pdf', async (req, res) => {
+app.get('/api/invoices/:id/export/pdf', authenticateToken, async (req, res) => {
   try {
     const invoice = invoiceDB.getById(req.params.id)
     if (!invoice) {
@@ -384,7 +485,7 @@ app.get('/api/invoices/:id/export/pdf', async (req, res) => {
 })
 
 // EXPORT invoice as Excel
-app.get('/api/invoices/:id/export/excel', async (req, res) => {
+app.get('/api/invoices/:id/export/excel', authenticateToken, async (req, res) => {
   try {
     const invoice = invoiceDB.getById(req.params.id)
     if (!invoice) {
@@ -401,7 +502,7 @@ app.get('/api/invoices/:id/export/excel', async (req, res) => {
 })
 
 // EXPORT all invoices as Excel Report
-app.get('/api/invoices/export/report', async (req, res) => {
+app.get('/api/invoices/export/report', authenticateToken, async (req, res) => {
   try {
     const invoices = invoiceDB.getAll()
     const excelBuffer = await generateReportExcel(invoices)
@@ -420,28 +521,37 @@ app.get('/api/health', (req, res) => {
 })
 
 // UPLOAD logo
-app.post('/api/logo/upload', upload.single('logo'), (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' })
+app.post('/api/logo/upload', authenticateToken, (req, res) => {
+  upload.single('logo')(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      console.error('Multer Error:', err)
+      return res.status(400).json({ error: `Upload error: ${err.message}` })
+    } else if (err) {
+      console.error('Unknown Upload Error:', err)
+      return res.status(500).json({ error: `Server error: ${err.message}` })
     }
-    res.json({ 
-      message: 'Logo uploaded successfully',
-      logoUrl: `/logos/company-logo${getFileExtension(req.file.originalname)}`
-    })
-  } catch (error) {
-    res.status(500).json({ error: error.message })
-  }
+
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' })
+      }
+      console.log('✓ Logo uploaded successfully:', req.file.filename)
+      res.json({ 
+        message: 'Logo uploaded successfully',
+        logoUrl: `/logos/company-logo${getFileExtension(req.file.originalname)}`
+      })
+    } catch (error) {
+      console.error('Logo process error:', error)
+      res.status(500).json({ error: error.message })
+    }
+  })
 })
 
 // GET logo
-app.get('/api/logo', (req, res) => {
+app.get('/api/logo', authenticateToken, (req, res) => {
   try {
-    const logoPath = join(__dirname, 'public', 'logos')
-    
-    // Check if logo exists (company-logo.*)
-    const files = readdirSync(logoPath)
-    const logoFile = files.find(f => f.startsWith('company-logo'))
+    const logoFiles = readdirSync(logosDir)
+    const logoFile = logoFiles.find(f => f.startsWith('company-logo'))
     
     if (!logoFile) {
       return res.status(404).json({ error: 'No logo found' })

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import CompanyForm from './CompanyForm'
 import { formatINR } from '../App'
 
-function InvoiceForm({ invoice, onSubmit, onCancel }) {
+function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
   // Helper to always provide a string value for inputs
   const safe = v => v === undefined || v === null ? '' : v
   const [companies, setCompanies] = useState([])
@@ -44,7 +44,9 @@ function InvoiceForm({ invoice, onSubmit, onCancel }) {
 
   const fetchCompanies = async () => {
     try {
-      const res = await fetch('http://localhost:9999/api/companies')
+      const res = await fetch('/api/companies', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
       if (res.ok) {
         const data = await res.json()
         setCompanies(data)
@@ -56,7 +58,9 @@ function InvoiceForm({ invoice, onSubmit, onCancel }) {
 
   const fetchServices = async () => {
     try {
-      const res = await fetch('http://localhost:9999/api/services')
+      const res = await fetch('/api/services', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
       if (res.ok) {
         const data = await res.json()
         setServices(data)
@@ -133,12 +137,15 @@ function InvoiceForm({ invoice, onSubmit, onCancel }) {
       const existing = companies.find(c => c.name === company.name)
       const method = existing ? 'PUT' : 'POST'
       const url = existing
-        ? `http://localhost:9999/api/companies/${existing.id}`
-        : 'http://localhost:9999/api/companies'
+        ? `/api/companies/${existing.id}`
+        : '/api/companies'
 
       const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(company)
       })
       if (!response.ok) throw new Error('Failed to save company')
@@ -410,7 +417,10 @@ function InvoiceForm({ invoice, onSubmit, onCancel }) {
               companies={companies}
               onSave={handleCompanySave}
               onDelete={async (id) => {
-                await fetch(`http://localhost:9999/api/companies/${id}`, { method: 'DELETE' });
+                await fetch(`/api/companies/${id}`, { 
+                  method: 'DELETE',
+                  headers: { 'Authorization': `Bearer ${token}` }
+                });
                 await fetchCompanies();
               }}
               onClose={() => setShowCompanyForm(false)}
