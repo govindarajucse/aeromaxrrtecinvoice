@@ -11,7 +11,7 @@ let db = null
 // Initialize database
 export async function initializeDatabase() {
   const SQL = await initSqlJs()
-  
+
   // Load existing database or create new one
   if (fs.existsSync(dbPath)) {
     const data = fs.readFileSync(dbPath)
@@ -290,7 +290,7 @@ export const invoiceDB = {
       `)
       stmt.bind([
         id, number, clientName, clientAddress || '', clientGSTN || '', dcNumber || '', poNumber || '', goodsService || '',
-        cgstRate || 9, sgstRate || 9, igstRate || 18, dueDate, status, notes, createdAt, createdAt,
+        cgstRate || 9, sgstRate || 9, igstRate || 0, dueDate, status, notes, createdAt, createdAt,
         companyName || '', companyAddress || '', companyGSTN || '', companyEmail || '', typeof roundOff === 'number' ? roundOff : 0,
         bankName || '', bankBranch || '', accountNo || '', ifscCode || ''
       ])
@@ -323,7 +323,7 @@ export const invoiceDB = {
       `)
       stmt.bind([
         number, clientName, clientAddress || '', clientGSTN || '', dcNumber || '', poNumber || '', goodsService || '',
-        cgstRate || 9, sgstRate || 9, igstRate || 18, dueDate, status, notes, updatedAt,
+        cgstRate || 9, sgstRate || 9, igstRate || 0, dueDate, status, notes, updatedAt,
         companyName || '', companyAddress || '', companyGSTN || '', companyEmail || '', typeof roundOff === 'number' ? roundOff : 0,
         bankName || '', bankBranch || '', accountNo || '', ifscCode || '', id
       ])

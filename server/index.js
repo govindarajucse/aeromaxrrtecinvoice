@@ -59,9 +59,9 @@ function getStaticPath() {
       return p;
     }
   }
-  
+
   console.warn('❌ index.html not found in any standard location.');
-  return paths[0]; 
+  return paths[0];
 }
 
 const staticPath = getStaticPath();
@@ -102,7 +102,7 @@ async function startServer() {
     await initializeDatabase()
     dbReady = true
     console.log('✓ Database initialized')
-    
+
     // Seed default admin user if none exists
     await seedUser()
 
@@ -454,7 +454,7 @@ app.post('/api/invoices', authenticateToken, (req, res) => {
       goodsService: goodsService || 'Service',
       cgstRate: cgstRate || 9,
       sgstRate: sgstRate || 9,
-      igstRate: igstRate || 18,
+      igstRate: igstRate || 0,
       dueDate,
       status,
       notes,
@@ -573,7 +573,7 @@ app.get('/api/invoices/export/report', authenticateToken, async (req, res) => {
   try {
     const invoices = invoiceDB.getAll()
     const excelBuffer = await generateReportExcel(invoices)
-    
+
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     res.setHeader('Content-Disposition', 'attachment; filename="Invoice-Report.xlsx"')
     res.send(excelBuffer)
@@ -603,7 +603,7 @@ app.post('/api/logo/upload', authenticateToken, (req, res) => {
         return res.status(400).json({ error: 'No file uploaded' })
       }
       console.log('✓ Logo uploaded successfully:', req.file.filename)
-      res.json({ 
+      res.json({
         message: 'Logo uploaded successfully',
         logoUrl: `/logos/company-logo${getFileExtension(req.file.originalname)}`
       })
@@ -619,11 +619,11 @@ app.get('/api/logo', authenticateToken, (req, res) => {
   try {
     const logoFiles = readdirSync(logosDir)
     const logoFile = logoFiles.find(f => f.startsWith('company-logo'))
-    
+
     if (!logoFile) {
       return res.status(404).json({ error: 'No logo found' })
     }
-    
+
     res.json({ logoUrl: `/logos/${logoFile}` })
   } catch (error) {
     if (error.code === 'ENOENT') {

@@ -736,7 +736,7 @@ export async function generateReportExcel(invoices) {
     amount: grandTotalSum
   })
   totalRow.font = { bold: true }
-  
+
   // Style boundaries
   worksheet.eachRow((row) => {
     row.eachCell((cell) => {

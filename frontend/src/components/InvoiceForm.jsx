@@ -142,7 +142,7 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
 
       const response = await fetch(url, {
         method,
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
@@ -417,7 +417,7 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
               companies={companies}
               onSave={handleCompanySave}
               onDelete={async (id) => {
-                await fetch(`/api/companies/${id}`, { 
+                await fetch(`/api/companies/${id}`, {
                   method: 'DELETE',
                   headers: { 'Authorization': `Bearer ${token}` }
                 });
@@ -467,7 +467,7 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
             </div>
 
             <div className="form-group">
-              <label htmlFor="poNumber">PO No</label>
+              <label htmlFor="poNumber">PO No *</label>
               <input
                 type="text"
                 id="poNumber"
@@ -475,6 +475,7 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
                 value={safe(formData.poNumber)}
                 onChange={handleChange}
                 placeholder="21"
+                required
               />
             </div>
 
