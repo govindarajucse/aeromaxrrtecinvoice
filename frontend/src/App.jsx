@@ -226,7 +226,19 @@ function App() {
         method: 'POST',
         body: formData
       })
-      if (!response.ok) throw new Error('Failed to upload logo')
+      
+      if (!response.ok) {
+        let errorMsg = 'Failed to upload logo'
+        try {
+          const errorData = await response.json()
+          errorMsg = errorData.error || errorMsg
+        } catch (e) {
+          // If not JSON, use default or status text
+          errorMsg = response.statusText || errorMsg
+        }
+        throw new Error(errorMsg)
+      }
+
       const data = await response.json()
       setLogoUrl(data.logoUrl)
       setShowLogoUpload(false)

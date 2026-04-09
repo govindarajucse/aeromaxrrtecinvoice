@@ -3,12 +3,18 @@ import cors from 'cors'
 import multer from 'multer'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
-import { readdirSync } from 'fs'
+import { readdirSync, existsSync, mkdirSync } from 'fs'
 import { invoiceDB, companyDB, serviceDB, initializeDatabase } from './db.js'
 import { generatePDF, generateExcel, generateReportExcel } from './export.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
+
+// Ensure public/logos directory exists
+const logosDir = join(__dirname, 'public', 'logos')
+if (!existsSync(logosDir)) {
+  mkdirSync(logosDir, { recursive: true })
+}
 
 const app = express()
 const PORT = 9999
