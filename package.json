@@ -1,19 +1,12 @@
 {
-  "name": "invoice-app",
-  "private": true,
+  "name": "aeromaxrr-invoice-root",
   "version": "1.0.0",
-  "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
-  },
-  "devDependencies": {
-    "@vitejs/plugin-react": "^4.0.0",
-    "vite": "^4.3.9"
+    "install-all": "npm install && cd server && npm install && cd ../frontend && npm install",
+    "build": "cd server && npm install && cd ../frontend && npm install && npm run build",
+    "start": "cd server && npm start",
+    "dev": "npm run dev:server & npm run dev:frontend",
+    "dev:server": "cd server && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev"
   }
 }

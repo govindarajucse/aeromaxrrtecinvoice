@@ -417,7 +417,7 @@ app.post('/api/logo/upload', upload.single('logo'), (req, res) => {
     }
     res.json({ 
       message: 'Logo uploaded successfully',
-      logoUrl: `http://localhost:9999/logos/company-logo${getFileExtension(req.file.originalname)}`
+      logoUrl: `/logos/company-logo${getFileExtension(req.file.originalname)}`
     })
   } catch (error) {
     res.status(500).json({ error: error.message })
@@ -437,13 +437,24 @@ app.get('/api/logo', (req, res) => {
       return res.status(404).json({ error: 'No logo found' })
     }
     
-    res.json({ logoUrl: `http://localhost:9999/logos/${logoFile}` })
+    res.json({ logoUrl: `/logos/${logoFile}` })
   } catch (error) {
     if (error.code === 'ENOENT') {
       res.status(404).json({ error: 'No logo found' })
     } else {
       res.status(500).json({ error: error.message })
     }
+  }
+})
+
+// Serve static files from the React frontend
+app.use(express.static(join(__dirname, '..', 'frontend', 'dist')))
+
+// Catch-all route to serve the React index.html
+app.get('*', (req, res) => {
+  // Check if the request is not for an API route
+  if (!req.path.startsWith('/api')) {
+    res.sendFile(join(__dirname, '..', 'frontend', 'dist', 'index.html'))
   }
 })
 

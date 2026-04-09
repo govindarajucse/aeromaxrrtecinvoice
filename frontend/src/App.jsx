@@ -4,7 +4,7 @@ import InvoiceForm from './components/InvoiceForm'
 import CompanyForm from './components/CompanyForm'
 import ServiceForm from './components/ServiceForm'
 
-const API_URL = 'http://localhost:9999/api'
+const API_URL = '/api'
 
 export function formatINR(amount) {
   return new Intl.NumberFormat('en-IN', {
