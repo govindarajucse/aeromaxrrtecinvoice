@@ -42,9 +42,11 @@ if (!existsSync(logosDir)) {
 function getStaticPath() {
   const cwd = process.cwd();
   const paths = [
-    join(cwd, 'frontend', 'dist'),
-    join(cwd, 'dist'),
-    join(__dirname, '..', 'frontend', 'dist')
+    join(cwd, 'frontend', 'dist'),              // Root layout
+    join(cwd, '..', 'frontend', 'dist'),        // Sub-folder layout (Render Root Dir: server)
+    join(cwd, 'dist'),                          // Monolithic build
+    join(__dirname, '..', 'frontend', 'dist'),  // ESM path resolution
+    '/opt/render/project/src/frontend/dist'     // Explicit Render environment
   ];
 
   console.log('🔍 Searching for frontend in:');
