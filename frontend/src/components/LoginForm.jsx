@@ -83,7 +83,7 @@ function LoginForm({ onLogin }) {
 
         <div className="login-footer">
           <p>© {new Date().getFullYear()} AeromaxRR Tec</p>
-          <p style={{ opacity: 0.3, fontSize: '10px' }}>V 1.0.6</p>
+          <p style={{ opacity: 0.3, fontSize: '10px' }}>V 1.0.7</p>
         </div>
       </div>
 
