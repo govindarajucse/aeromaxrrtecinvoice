@@ -174,6 +174,48 @@ app.get('/api/test-server', (req, res) => {
   res.send('✓ Server is alive and responding to API calls! Date: ' + new Date().toISOString());
 });
 
+// --- AUTH API (MOVED TO TOP FOR PRIORITY) ---
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    console.log(`[AUTH] Login attempt for: ${username}`);
+    const user = userDB.findByUsername(username);
+
+    if (!user) {
+      console.warn(`[AUTH] User not found: ${username}`);
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      console.warn(`[AUTH] Wrong password for: ${username}`);
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const payload = { id: user.id, username: user.username, role: user.role };
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '12h' });
+
+    console.log(`[AUTH] ✅ Login successful: ${username}`);
+    res.json({ token, user: { username: user.username, role: user.role } });
+  } catch (error) {
+    console.error(`[AUTH] ❌ Login error:`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) return res.status(400).json({ error: 'Required fields missing' });
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    const user = userDB.create({ id: Date.now().toString(), username, password: hashedPassword, role: 'admin' });
+    res.status(201).json({ message: 'User registered', username: user.username });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Seed database with initial data
 function seedDatabase() {
   const existingCompanies = companyDB.getAll()
@@ -613,10 +655,10 @@ app.get('/api/logo', authenticateToken, (req, res) => {
 
 // API 404 Handler (Avoid serving HTML for missing API routes)
 app.all('/api/*', (req, res) => {
-  res.status(404).json({ 
-    error: 'API route not found', 
+  res.status(404).json({
+    error: 'API route not found',
     path: req.path,
-    method: req.method 
+    method: req.method
   })
 })
 
