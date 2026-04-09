@@ -168,36 +168,10 @@ app.use((req, res, next) => {
 });
 
 // --- API ROUTES START HERE ---
-// (The rest of the file defines the actual routes)
 
-
-// --- DEBUG ENDPOINT (Temporary) ---
-app.get('/api/debug-files', (req, res) => {
-  try {
-    const cwd = process.cwd();
-    const rootFiles = readdirSync(cwd);
-    let frontendFiles = [];
-    let distFiles = [];
-
-    if (rootFiles.includes('frontend')) {
-      frontendFiles = readdirSync(join(cwd, 'frontend'));
-      if (frontendFiles.includes('dist')) {
-        distFiles = readdirSync(join(cwd, 'frontend', 'dist'));
-      }
-    }
-
-    res.json({
-      cwd,
-      __dirname,
-      rootFiles,
-      frontendFiles,
-      distFiles,
-      staticPath,
-      indexExists: existsSync(join(staticPath, 'index.html'))
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+// Simple Truth Test (Visit this in your browser to check if the server is alive)
+app.get('/api/test-server', (req, res) => {
+  res.send('✓ Server is alive and responding to API calls! Date: ' + new Date().toISOString());
 });
 
 // Seed database with initial data
