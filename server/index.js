@@ -638,12 +638,12 @@ app.get('/api/logo', authenticateToken, (req, res) => {
 })
 
 // API 404 Handler (Avoid serving HTML for missing API routes)
-app.use('/api/*', (req, res, next) => {
-  if (req.accepts('json')) {
-    res.status(404).json({ error: 'API route not found' })
-  } else {
-    next()
-  }
+app.all('/api/*', (req, res) => {
+  res.status(404).json({ 
+    error: 'API route not found', 
+    path: req.path,
+    method: req.method 
+  })
 })
 
 // Serve static files from the React frontend
