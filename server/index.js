@@ -130,15 +130,6 @@ app.use((req, res, next) => {
   next()
 })
 
-// API 404 Handler (Avoid serving HTML for missing API routes)
-app.use('/api/*', (req, res, next) => {
-  if (req.accepts('json')) {
-    res.status(404).json({ error: 'API route not found' })
-  } else {
-    next()
-  }
-})
-
 // Seed database with initial data
 function seedDatabase() {
   const existingCompanies = companyDB.getAll()
@@ -573,6 +564,15 @@ app.get('/api/logo', authenticateToken, (req, res) => {
     } else {
       res.status(500).json({ error: error.message })
     }
+  }
+})
+
+// API 404 Handler (Avoid serving HTML for missing API routes)
+app.use('/api/*', (req, res, next) => {
+  if (req.accepts('json')) {
+    res.status(404).json({ error: 'API route not found' })
+  } else {
+    next()
   }
 })
 
