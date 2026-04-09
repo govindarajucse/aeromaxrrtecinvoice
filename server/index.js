@@ -176,6 +176,7 @@ app.get('/api/test-server', (req, res) => {
 
 // --- AUTH API (MOVED TO TOP FOR PRIORITY) ---
 app.post('/api/auth/login', async (req, res) => {
+  res.setHeader('X-API-Source', 'Express-Server');
   try {
     const { username, password } = req.body;
     console.log(`[AUTH] Login attempt for: ${username}`);
@@ -315,6 +316,7 @@ app.post('/api/auth/register', async (req, res) => {
 })
 
 app.post('/api/auth/login', async (req, res) => {
+  res.setHeader('X-API-Source', 'Express-Server')
   try {
     const { username, password } = req.body
     const user = userDB.findByUsername(username)
