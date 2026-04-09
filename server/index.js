@@ -148,21 +148,24 @@ app.use(cors())
 app.use(express.json())
 app.use(express.static(join(__dirname, 'public')))
 
-// Diagnostic Logging
+// --- HYPER-VERBOSE LOGGING FOR RENDER DEBUGGING ---
 app.use((req, res, next) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] ${req.method} ${req.path}`);
   if (req.path.startsWith('/api')) {
-    console.log(`[API Request] ${req.method} ${req.path}`)
+    console.log(`   > API Call detected. Payload keys: ${Object.keys(req.body || {}).join(', ') || 'none'}`);
   }
-  next()
-})
+  next();
+});
 
 // Middleware to check if database is ready
 app.use((req, res, next) => {
   if (req.path.startsWith('/api') && !dbReady) {
-    return res.status(503).json({ error: 'Database not ready' })
+    console.error(`❌ API blocked: Database not ready for ${req.path}`);
+    return res.status(503).json({ error: 'Database not ready' });
   }
-  next()
-})
+  next();
+});
 
 // --- API ROUTES START HERE ---
 // (The rest of the file defines the actual routes)
