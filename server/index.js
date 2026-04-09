@@ -106,9 +106,9 @@ async function startServer() {
     // Seed default admin user if none exists
     await seedUser()
 
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`\n✓ Invoice API Server`)
-      console.log(`  Listening on port: ${PORT}`)
+      console.log(`  Listening on port: ${PORT} (0.0.0.0)`)
       console.log(`  Environment: ${process.env.NODE_ENV || 'development'}\n`)
     })
   } catch (error) {
