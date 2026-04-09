@@ -43,7 +43,7 @@ console.log(`✓ Static files path: ${staticPath}`)
 console.log(`✓ index.html exists: ${existsSync(join(staticPath, 'index.html'))}`)
 
 const app = express()
-const PORT = 9999
+const PORT = process.env.PORT || 9999
 
 // Configure multer for logo uploads
 const storage = multer.diskStorage({
@@ -113,8 +113,8 @@ async function startServer() {
 
     app.listen(PORT, () => {
       console.log(`\n✓ Invoice API Server`)
-      console.log(`  Running on http://localhost:${PORT}`)
-      console.log(`  API: http://localhost:${PORT}/api/invoices\n`)
+      console.log(`  Listening on port: ${PORT}`)
+      console.log(`  Environment: ${process.env.NODE_ENV || 'development'}\n`)
     })
   } catch (error) {
     console.error('Failed to start server:', error)
@@ -128,6 +128,15 @@ app.use((req, res, next) => {
     return res.status(503).json({ error: 'Database not ready' })
   }
   next()
+})
+
+// API 404 Handler (Avoid serving HTML for missing API routes)
+app.use('/api/*', (req, res, next) => {
+  if (req.accepts('json')) {
+    res.status(404).json({ error: 'API route not found' })
+  } else {
+    next()
+  }
 })
 
 // Seed database with initial data
