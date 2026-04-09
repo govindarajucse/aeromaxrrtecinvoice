@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "start": "node index.js",
-    "dev": "node --watch index.js"
+    "dev": "node --watch index.js",
+    "build": "echo 'Build not required in server directory'"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
