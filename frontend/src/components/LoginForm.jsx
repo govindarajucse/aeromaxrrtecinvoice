@@ -46,10 +46,10 @@ function LoginForm({ onLogin }) {
           <h2>AeromaxRR Tec</h2>
           <p>Sign in to manage your invoices</p>
         </div>
-        
+
         <form onSubmit={handleSubmit} className="login-form">
           {error && <div className="error-badge">{error}</div>}
-          
+
           <div className="form-group">
             <label htmlFor="username">Username</label>
             <input
@@ -81,7 +81,8 @@ function LoginForm({ onLogin }) {
         </form>
 
         <div className="login-footer">
-          <p>© 2026 AeromaxRR Technology Solutions</p>
+          <p>© {new Date().getFullYear()} AeromaxRR Tec</p>
+          <p style={{ opacity: 0.3, fontSize: '10px' }}>V 1.0.5</p>
         </div>
       </div>
 
