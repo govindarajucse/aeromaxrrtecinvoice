@@ -386,9 +386,9 @@ export function generatePDF(invoice) {
       // Middle vertical separator
       doc.moveTo(margin + halfW, y).lineTo(margin + halfW, y + sigHeight).stroke();
       // Jurisdiction
-      doc.font('Helvetica').text('Subject to Bangalore Jurisdiction', margin + 8, y + 8, { width: halfW - 16, align: 'center' });
+      doc.font('Helvetica-Bold').text('Subject to Bangalore Jurisdiction', margin + 8, y + 8, { width: halfW - 16, align: 'center' });
       // Receiver signature
-      doc.text("Receiver's Signature & Seal", margin + 8, y + sigHeight - 18, { width: halfW - 16, align: 'center' });
+      doc.font('Helvetica-Bold').text("Receiver's Signature & Seal", margin + 8, y + sigHeight - 18, { width: halfW - 16, align: 'center' });
       // Company signature
       doc.font('Helvetica-Bold').text('For ' + (invoice.companyName || '____________________'), margin + halfW + 8, y + 8, { width: halfW - 16, align: 'center' });
       doc.font('Helvetica-Bold').text('Authorised Signatory', margin + halfW + 8, y + sigHeight - 18, { width: halfW - 16, align: 'center' });
