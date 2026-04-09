@@ -45,38 +45,6 @@ console.log(`✓ index.html exists: ${existsSync(join(staticPath, 'index.html'))
 const app = express()
 const PORT = process.env.PORT || 9999
 
-// Configure multer for logo uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, join(__dirname, 'public', 'logos'))
-  },
-  filename: (req, file, cb) => {
-    cb(null, 'company-logo' + getFileExtension(file.originalname))
-  }
-})
-
-const upload = multer({
-  storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true)
-    } else {
-      cb(new Error('Only image files are allowed'))
-    }
-  }
-})
-
-function getFileExtension(filename) {
-  return filename.substring(filename.lastIndexOf('.'))
-}
-
-// Middleware
-app.use(cors())
-app.use(express.json())
-app.use(express.static(join(__dirname, 'public')))
-
-// Initialize database on startup
 let dbReady = false
 
 async function seedUser() {
@@ -122,13 +90,56 @@ async function startServer() {
   }
 }
 
+// Configure multer for logo uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, join(__dirname, 'public', 'logos'))
+  },
+  filename: (req, file, cb) => {
+    cb(null, 'company-logo' + getFileExtension(file.originalname))
+  }
+})
+
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true)
+    } else {
+      cb(new Error('Only image files are allowed'))
+    }
+  }
+})
+
+function getFileExtension(filename) {
+  return filename.substring(filename.lastIndexOf('.'))
+}
+
+// Middleware
+app.use(cors())
+app.use(express.json())
+app.use(express.static(join(__dirname, 'public')))
+
+// Diagnostic Logging
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    console.log(`[API Request] ${req.method} ${req.path}`)
+  }
+  next()
+})
+
 // Middleware to check if database is ready
 app.use((req, res, next) => {
-  if (!dbReady) {
+  if (req.path.startsWith('/api') && !dbReady) {
     return res.status(503).json({ error: 'Database not ready' })
   }
   next()
 })
+
+// --- API ROUTES START HERE ---
+// (The rest of the file defines the actual routes)
+
 
 // Seed database with initial data
 function seedDatabase() {
