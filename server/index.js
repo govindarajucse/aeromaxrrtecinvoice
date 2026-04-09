@@ -169,6 +169,12 @@ app.use((req, res, next) => {
 
 // --- API ROUTES START HERE ---
 
+// GLOBAL API IDENTIFIER (Used to see if request reached Express)
+app.use('/api', (req, res, next) => {
+  res.setHeader('X-API-Server', 'invoice-api-v1');
+  next();
+});
+
 // Simple Truth Test (Visit this in your browser to check if the server is alive)
 app.get('/api/test-server', (req, res) => {
   res.send('✓ Server is alive and responding to API calls! Date: ' + new Date().toISOString());
