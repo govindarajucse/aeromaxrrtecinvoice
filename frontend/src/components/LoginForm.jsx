@@ -29,7 +29,8 @@ function LoginForm({ onLogin }) {
         // Handle non-JSON response (e.g., server crash or HTML error page)
         const text = await response.text()
         console.error('Server returned non-JSON response:', text)
-        throw new Error(`Server error (${response.status}): The server is not responding correctly. Please check server logs on Render.`)
+        const preview = text.substring(0, 50).trim()
+        throw new Error(`Server error (${response.status}): The server returned a webpage instead of data. (Preview: "${preview}...")`)
       }
     } catch (err) {
       setError(err.message)
@@ -82,7 +83,7 @@ function LoginForm({ onLogin }) {
 
         <div className="login-footer">
           <p>© {new Date().getFullYear()} AeromaxRR Tec</p>
-          <p style={{ opacity: 0.3, fontSize: '10px' }}>V 1.0.5</p>
+          <p style={{ opacity: 0.3, fontSize: '10px' }}>V 1.0.6</p>
         </div>
       </div>
 
