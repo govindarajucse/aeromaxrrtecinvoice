@@ -16,6 +16,10 @@ if (!existsSync(logosDir)) {
   mkdirSync(logosDir, { recursive: true })
 }
 
+const staticPath = join(__dirname, '..', 'frontend', 'dist')
+console.log(`✓ Static files path: ${staticPath}`)
+console.log(`✓ index.html exists: ${existsSync(join(staticPath, 'index.html'))}`)
+
 const app = express()
 const PORT = 9999
 
@@ -454,13 +458,13 @@ app.get('/api/logo', (req, res) => {
 })
 
 // Serve static files from the React frontend
-app.use(express.static(join(__dirname, '..', 'frontend', 'dist')))
+app.use(express.static(staticPath))
 
 // Catch-all route to serve the React index.html
 app.get('*', (req, res) => {
   // Check if the request is not for an API route
   if (!req.path.startsWith('/api')) {
-    res.sendFile(join(__dirname, '..', 'frontend', 'dist', 'index.html'))
+    res.sendFile(join(staticPath, 'index.html'))
   }
 })
 
