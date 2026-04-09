@@ -18,13 +18,19 @@ function LoginForm({ onLogin }) {
         body: JSON.stringify({ username, password })
       })
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Login failed')
+      const contentType = response.headers.get('content-type')
+      if (contentType && contentType.includes('application/json')) {
+        const data = await response.json()
+        if (!response.ok) {
+          throw new Error(data.error || 'Login failed')
+        }
+        onLogin(data.token, data.user)
+      } else {
+        // Handle non-JSON response (e.g., server crash or HTML error page)
+        const text = await response.text()
+        console.error('Server returned non-JSON response:', text)
+        throw new Error(`Server error (${response.status}): The server is not responding correctly. Please check server logs on Render.`)
       }
-
-      onLogin(data.token, data.user)
     } catch (err) {
       setError(err.message)
     } finally {
