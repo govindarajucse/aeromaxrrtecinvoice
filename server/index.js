@@ -38,7 +38,40 @@ if (!existsSync(logosDir)) {
   mkdirSync(logosDir, { recursive: true })
 }
 
-const staticPath = join(__dirname, '..', 'frontend', 'dist')
+// Resilient Static Path Detection for Render/Production
+function getStaticPath() {
+  const possiblePaths = [
+    join(__dirname, '..', 'frontend', 'dist'), // Standard (development/standard layout)
+    join(process.cwd(), 'frontend', 'dist'),   // From project root
+    join(process.cwd(), 'dist'),               // Monolithic build
+    '/opt/render/project/src/frontend/dist'    // Explicit Render path
+  ]
+
+  for (const p of possiblePaths) {
+    if (existsSync(join(p, 'index.html'))) {
+      return p
+    }
+  }
+  return possiblePaths[0] // Fallback to standard
+}
+
+const staticPath = getStaticPath()
+
+// Diagnostic: List directories if frontend is missing
+if (!existsSync(join(staticPath, 'index.html'))) {
+  console.warn(`⚠️  WARNING: frontend/dist/index.html not found at: ${staticPath}`)
+  try {
+    const rootItems = readdirSync(process.cwd())
+    console.log(`📂 Current Working Directory (${process.cwd()}) contents:`, rootItems)
+    if (rootItems.includes('frontend')) {
+      const frontendItems = readdirSync(join(process.cwd(), 'frontend'))
+      console.log(`📂 frontend/ contents:`, frontendItems)
+    }
+  } catch (err) {
+    console.error('❌ Failed to list directories:', err)
+  }
+}
+
 console.log(`✓ Static files path: ${staticPath}`)
 console.log(`✓ index.html exists: ${existsSync(join(staticPath, 'index.html'))}`)
 
