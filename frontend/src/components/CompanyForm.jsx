@@ -65,7 +65,7 @@ function CompanyForm({ companies = [], onSave, onDelete, onClose }) {
         >
           ×
         </button>
-        <h2>Manage My Companies</h2>
+        <h2>Manage Companies</h2>
         <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '1rem' }}>
           Add or edit your business profiles here. These will be available in the invoice dropdown.
         </p>

@@ -218,8 +218,7 @@ function InvoiceItem({ invoice, token, onEdit, onDelete, onStatusChange }) {
                     setShowExportMenu(false)
                   }}
                 >
-                  📄 PDF
-                </button>
+                  📕 PDF                </button>
                 <button
                   className="export-option"
                   disabled={downloading === 'excel'}

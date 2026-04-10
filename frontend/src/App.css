@@ -58,6 +58,8 @@ body {
   align-items: center;
   gap: 2rem;
   flex-wrap: wrap;
+  width: 100%;
+  padding: 0 1rem;
 }
 
 .app-header h1 {
@@ -465,19 +467,8 @@ body {
   border-collapse: collapse;
   background: white;
   border-radius: 12px;
-  overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   border: 1px solid #e2e8f0;
-}
-
-.invoices-table-wrapper {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  border-radius: 12px;
-}
-
-.invoices-table-wrapper table {
-  min-width: 800px;
 }
 
 .invoices-table thead {
@@ -582,6 +573,7 @@ body {
   gap: 0.5rem;
   justify-content: center;
   position: relative;
+  z-index: 10;
 }
 
 .export-menu-container {
@@ -597,7 +589,7 @@ body {
   border-radius: 8px;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   min-width: 140px;
-  z-index: 100;
+  z-index: 1000;
   margin-top: 0.5rem;
   overflow: hidden;
 }
@@ -765,6 +757,7 @@ body {
     gap: 1rem;
     align-items: center;
     width: 100%;
+    padding: 0;
   }
 
   .header-actions {
@@ -780,10 +773,11 @@ body {
   }
 
   .btn {
-    padding: 0.5rem 0.75rem;
+    padding: 0.625rem 0.875rem;
     font-size: 0.85rem;
     flex: 1 1 auto;
-    min-width: 120px;
+    min-width: 110px;
+    height: 44px;
   }
 
   .form-row {
@@ -799,6 +793,14 @@ body {
     padding: 0.5rem;
   }
 
+  /* Hide less important columns on mobile */
+  .invoices-table th:nth-child(3),
+  .invoices-table td:nth-child(3),
+  .invoices-table th:nth-child(7),
+  .invoices-table td:nth-child(7) {
+    display: none;
+  }
+
   .form-container {
     padding: 1.5rem;
     max-height: 95vh;
@@ -810,6 +812,7 @@ body {
 
   .app-main {
     padding: 1rem;
+    width: 100%;
   }
 
   .status-select {
@@ -831,11 +834,13 @@ body {
 
   .app-main {
     padding: 0.75rem;
+    width: 100%;
   }
 
   .header-content {
     gap: 0.75rem;
     width: 100%;
+    padding: 0;
   }
 
   .header-actions {
@@ -872,6 +877,18 @@ body {
     padding: 0.5rem 0.5rem;
   }
 
+  /* Hide more columns on small mobile */
+  .invoices-table th:nth-child(2),
+  .invoices-table td:nth-child(2),
+  .invoices-table th:nth-child(3),
+  .invoices-table td:nth-child(3),
+  .invoices-table th:nth-child(6),
+  .invoices-table td:nth-child(6),
+  .invoices-table th:nth-child(7),
+  .invoices-table td:nth-child(7) {
+    display: none;
+  }
+
   .status-select {
     min-width: 90px;
     padding: 0.3rem 0.4rem !important;
@@ -895,7 +912,8 @@ body {
     padding: 0.5rem 0.625rem;
     font-size: 0.75rem;
     flex: 1 1 auto;
-    min-width: 100px;
+    min-width: 95px;
+    height: 42px;
   }
 
   .invoice-number {
@@ -918,24 +936,30 @@ body {
 
   .app-main {
     padding: 0.5rem;
+    width: 100%;
   }
 
   .header-content {
     gap: 0.5rem;
+    width: 100%;
+    padding: 0;
   }
 
   .header-actions {
     gap: 0.25rem;
+    width: 100%;
   }
 
   .app-header h1 {
     font-size: 1rem;
+    text-align: center;
   }
 
   .btn {
     padding: 0.4rem 0.5rem;
     font-size: 0.7rem;
-    min-width: 90px;
+    min-width: 85px;
+    height: 40px;
   }
 
   .invoices-table {
@@ -950,6 +974,20 @@ body {
   .invoices-table th {
     font-size: 0.65rem;
     padding: 0.4rem 0.3rem;
+  }
+
+  /* Hide even more columns on very small mobile */
+  .invoices-table th:nth-child(2),
+  .invoices-table td:nth-child(2),
+  .invoices-table th:nth-child(3),
+  .invoices-table td:nth-child(3),
+  .invoices-table th:nth-child(5),
+  .invoices-table td:nth-child(5),
+  .invoices-table th:nth-child(6),
+  .invoices-table td:nth-child(6),
+  .invoices-table th:nth-child(7),
+  .invoices-table td:nth-child(7) {
+    display: none;
   }
 
   .status-select {

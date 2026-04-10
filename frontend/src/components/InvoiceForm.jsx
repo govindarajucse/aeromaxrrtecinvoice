@@ -255,7 +255,17 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
         >
           ×
         </button>
-        <h2>{invoice ? 'Edit Invoice' : 'New Invoice'}</h2>
+        <h2 style={{ display: 'flex', alignItems: 'center', gap: '1rem', justifyContent: 'space-between' }}>
+          <span>{invoice ? 'Edit Invoice' : 'New Invoice'}</span>
+          <button 
+            type="button" 
+            className="btn btn-secondary" 
+            onClick={() => setShowCompanyForm(true)}
+            style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}
+          >
+            ➕ Add Company
+          </button>
+        </h2>
         <form onSubmit={handleSubmit}>
           <fieldset style={{ border: '1px solid #ccc', marginBottom: 16, padding: 12 }}>
             <legend>Our Company Details</legend>
@@ -274,11 +284,6 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
                   ))}
                   <option value="__new">Add New</option>
                 </select>
-              </div>
-              <div className="form-group">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowCompanyForm(true)}>
-                  Manage Companies
-                </button>
               </div>
             </div>
             <div className="form-row">

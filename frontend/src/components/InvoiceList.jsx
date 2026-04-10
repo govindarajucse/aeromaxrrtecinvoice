@@ -13,35 +13,33 @@ function InvoiceList({ invoices, token, onEdit, onDelete, onStatusChange }) {
 
   return (
     <div className="invoice-list">
-      <div className="invoices-table-wrapper">
-        <table className="invoices-table">
-          <thead>
-            <tr>
-              <th>Invoice #</th>
-              <th>Invoice Date</th>
-              <th>PO Number</th>
-              <th>Client</th>
-              <th>Amount</th>
-              <th>Due Date</th>
-              <th>Elapsed</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoices.map(invoice => (
-              <InvoiceItem
-                key={invoice.id}
-                invoice={invoice}
-                token={token}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                onStatusChange={onStatusChange}
-              />
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <table className="invoices-table">
+        <thead>
+          <tr>
+            <th>Invoice #</th>
+            <th>Invoice Date</th>
+            <th>PO Number</th>
+            <th>Client</th>
+            <th>Amount</th>
+            <th>Due Date</th>
+            <th>Elapsed</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {invoices.map(invoice => (
+            <InvoiceItem
+              key={invoice.id}
+              invoice={invoice}
+              token={token}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onStatusChange={onStatusChange}
+            />
+          ))}
+        </tbody>
+      </table>
     </div>
   )
 }

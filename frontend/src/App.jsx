@@ -324,20 +324,14 @@ function App() {
             </div>
           </div>
           <div className="header-actions" style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
-            <Link to="/" className="btn btn-secondary nav-link">
+            <Link to="/" className="btn btn-secondary nav-link" style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}>
               📊 Dashboard
             </Link>
             <button 
               className="btn btn-secondary"
-              onClick={() => setShowCompaniesModal(true)}
-              title="Manage Companies"
-            >
-              🏢 Companies
-            </button>
-            <button 
-              className="btn btn-secondary"
               onClick={() => setShowServicesModal(true)}
               title="Manage Services"
+              style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}
             >
               🛠️ Services
             </button>
@@ -345,6 +339,7 @@ function App() {
               className="btn btn-secondary"
               onClick={handleDownloadReport}
               title="Download Excel Report"
+              style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}
             >
               📊 Report
             </button>
@@ -352,15 +347,17 @@ function App() {
               className="btn btn-secondary"
               onClick={() => setShowLogoUpload(!showLogoUpload)}
               title={logoUrl ? "Change logo" : "Upload logo"}
+              style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}
             >
               📁 Upload Logo
             </button>
             <button 
-              className="btn btn-primary"
+              className="btn btn-secondary"
               onClick={() => {
                 setEditingInvoice(null)
                 setShowForm(true)
               }}
+              style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}
             >
               ➕ New Invoice
             </button>
@@ -368,7 +365,7 @@ function App() {
               className="btn btn-secondary user-badge-btn"
               onClick={handleLogout}
               title="Click to logout"
-              style={{ padding: '8px 16px', fontSize: '14px' }}
+              style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}
             >
               👤 {user?.username}
             </button>
