@@ -109,6 +109,9 @@ function InvoiceItem({ invoice, token, onEdit, onDelete, onStatusChange }) {
     <>
       <tr className="invoice-row">
         <td className="invoice-number">{invoice.number}</td>
+        <td className="invoice-date" style={{ whiteSpace: 'nowrap' }}>
+          {invoice.invoiceDate ? formatDate(invoice.invoiceDate) : '-'}
+        </td>
         <td className="po-number">{invoice.poNumber || '-'}</td>
         <td className="client-name">{invoice.clientName}</td>
         <td className="amount">
@@ -234,7 +237,7 @@ function InvoiceItem({ invoice, token, onEdit, onDelete, onStatusChange }) {
       </tr>
       {showNotes && invoice.notes && (
         <tr className="notes-row">
-          <td colSpan="6">
+          <td colSpan="7">
             <div className="notes-content" style={{ position: 'relative' }}>
               <button
                 type="button"

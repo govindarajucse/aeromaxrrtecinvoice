@@ -35,6 +35,7 @@ export async function initializeDatabase() {
       sgstRate REAL DEFAULT 9,
       igstRate REAL DEFAULT 0,
       dueDate TEXT NOT NULL,
+      invoiceDate TEXT,
       status TEXT NOT NULL DEFAULT 'Draft',
       notes TEXT,
       createdAt TEXT NOT NULL,
@@ -65,7 +66,8 @@ export async function initializeDatabase() {
     { name: 'bankName', type: 'TEXT' },
     { name: 'bankBranch', type: 'TEXT' },
     { name: 'accountNo', type: 'TEXT' },
-    { name: 'ifscCode', type: 'TEXT' }
+    { name: 'ifscCode', type: 'TEXT' },
+    { name: 'invoiceDate', type: 'TEXT' }
   ]
   requiredColumns.forEach(({ name, type }) => {
     if (!existingColumns.includes(name)) {

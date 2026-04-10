@@ -11,6 +11,7 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
   const [selectedCompany, setSelectedCompany] = useState('')
   const [formData, setFormData] = useState({
     number: '',
+    invoiceDate: new Date().toISOString().split('T')[0],
     clientName: '',
     clientAddress: '',
     clientGSTN: '',
@@ -216,8 +217,8 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (!formData.number || !formData.clientName || !formData.dueDate || !formData.companyName || !formData.companyAddress) {
-      alert('Please fill in invoice number, client name, due date, company name, and company address')
+    if (!formData.number || !formData.invoiceDate || !formData.clientName || !formData.dueDate || !formData.companyName || !formData.companyAddress) {
+      alert('Please fill in invoice number, invoice date, client name, due date, company name, and company address')
       return
     }
     if (formData.lineItems.length === 0) {
@@ -436,6 +437,18 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
                 value={safe(formData.number)}
                 onChange={handleChange}
                 placeholder="INV-001"
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="invoiceDate">Invoice Date *</label>
+              <input
+                type="date"
+                id="invoiceDate"
+                name="invoiceDate"
+                value={safe(formData.invoiceDate)}
+                onChange={handleChange}
                 required
               />
             </div>

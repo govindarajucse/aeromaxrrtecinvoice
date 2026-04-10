@@ -17,6 +17,7 @@ function InvoiceList({ invoices, token, onEdit, onDelete, onStatusChange }) {
         <thead>
           <tr>
             <th>Invoice #</th>
+            <th>Invoice Date</th>
             <th>PO Number</th>
             <th>Client</th>
             <th>Amount</th>
