@@ -1,0 +1,14 @@
+# Copy this content to your .env file in the server folder
+# The .env file should be named exactly ".env" (without the .txt extension)
+
+# Database connection - replace with your actual PostgreSQL credentials
+DATABASE_URL=postgresql://postgres:yourpassword@localhost:5432/aeromaxrrtecinvoicedb
+
+# JWT Secret for authentication
+JWT_SECRET=aeromaxrr-local-dev-secret-2026
+
+# Environment
+NODE_ENV=development
+
+# Port (optional, defaults to 9999)
+# PORT=9999

@@ -682,7 +682,8 @@ export async function generateReportExcel(invoices) {
     { header: 'Invoice Number', key: 'number', width: 25 },
     { header: 'PO Number', key: 'poNumber', width: 15 },
     { header: 'Client Name', key: 'clientName', width: 35 },
-    { header: 'Date', key: 'date', width: 15 },
+    { header: 'Invoice Date', key: 'invoiceDate', width: 15 },
+    { header: 'Created Date', key: 'date', width: 15 },
     { header: 'Days Elapsed', key: 'daysElapsed', width: 15 },
     { header: 'Amount (₹)', key: 'amount', width: 18 },
     { header: 'Status', key: 'status', width: 12 }
@@ -720,6 +721,7 @@ export async function generateReportExcel(invoices) {
       number: inv.number || '',
       poNumber: inv.poNumber || '-',
       clientName: inv.clientName || '',
+      invoiceDate: inv.invoiceDate ? new Date(inv.invoiceDate).toLocaleDateString('en-IN') : (inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('en-IN') : ''),
       date: inv.createdAt ? new Date(inv.createdAt).toLocaleDateString('en-IN') : '',
       daysElapsed: finalDaysElapsed,
       amount: totalAmount,

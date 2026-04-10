@@ -1,3 +1,4 @@
+import dotenv from 'dotenv'
 import express from 'express'
 import cors from 'cors'
 import multer from 'multer'
@@ -8,6 +9,9 @@ import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
 import { invoiceDB, companyDB, serviceDB, userDB, initializeDatabase } from './db.js'
 import { generatePDF, generateExcel, generateReportExcel } from './export.js'
+
+// Load environment variables
+dotenv.config()
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -78,18 +82,31 @@ async function seedUser() {
   try {
     const users = await userDB.getAll()
     if (users.length === 0) {
+      const adminUsername = process.env.ADMIN_USERNAME || 'admin'
+      const adminPassword = process.env.ADMIN_PASSWORD
+      
+      if (!adminPassword) {
+        console.log('\n🔐 SECURITY SETUP REQUIRED')
+        console.log('=====================================')
+        console.log('No admin password found in environment variables.')
+        console.log('Please set ADMIN_PASSWORD in your .env file')
+        console.log('Example: ADMIN_PASSWORD=your-secure-password')
+        console.log('=====================================\n')
+        process.exit(1)
+      }
+      
       console.log('--- Initial Setup: Seeding Default User ---')
       const salt = await bcrypt.genSalt(10)
-      const hashedPassword = await bcrypt.hash('adminpassword', salt)
+      const hashedPassword = await bcrypt.hash(adminPassword, salt)
       await userDB.create({
         id: 'admin',
-        username: 'admin',
+        username: adminUsername,
         password: hashedPassword,
         role: 'admin'
       })
       console.log('✓ Default admin user created')
-      console.log('  Username: admin')
-      console.log('  Password: adminpassword')
+      console.log(`  Username: ${adminUsername}`)
+      console.log(`  Password: [set via environment variable]`)
       console.log('-------------------------------------------')
     }
   } catch (error) {
@@ -199,7 +216,7 @@ app.post('/api/auth/login', async (req, res) => {
     const { username, password } = req.body;
     console.log(`[AUTH] ✅ Login route HIT for: "${username}" at ${new Date().toISOString()}`);
     console.log(`[AUTH] Content-Type: ${req.headers['content-type']}`);
-    const user = userDB.findByUsername(username);
+    const user = await userDB.findByUsername(username);
 
     if (!user) {
       console.warn(`[AUTH] User not found: ${username}`);
