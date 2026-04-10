@@ -52,6 +52,10 @@ function getStaticPath() {
   console.log('🔍 Searching for frontend in:');
   paths.forEach(p => console.log(`   - ${p}`));
 
+  console.log(`📋 Current Working Directory: ${cwd}`);
+  console.log(`📁 __dirname: ${__dirname}`);
+  console.log(`🌐 PORT: ${process.env.PORT || '9999'}`);
+
   for (const p of paths) {
     const indexPath = join(p, 'index.html');
     if (existsSync(indexPath)) {
@@ -60,7 +64,7 @@ function getStaticPath() {
     }
   }
 
-  console.warn('❌ index.html not found in any standard location.');
+  console.warn('❌ index.html not found in any standard location. Defaulting to paths[0]');
   return paths[0];
 }
 
@@ -167,6 +171,25 @@ app.get('/api/test-server', (req, res) => {
   res.json({ status: 'success', message: 'Server is alive', date: new Date().toISOString() });
 });
 
+// Debug Route for Render
+app.get('/api/debug', (req, res) => {
+  res.json({
+    cwd: process.cwd(),
+    dirname: __dirname,
+    staticPath,
+    envPort: process.env.PORT,
+    nodeEnv: process.env.NODE_ENV,
+    dbReady,
+    indexFound: existsSync(join(staticPath, 'index.html')),
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Root API handler to prevent 404 falling through to HTML catch-all
+app.get('/api', (req, res) => {
+  res.json({ message: 'Welcome to Invoice API', version: '1.0.12', status: 'ready' });
+});
+
 // Auth API
 app.post('/api/auth/login', async (req, res) => {
   try {
@@ -200,7 +223,7 @@ app.post('/api/auth/register', async (req, res) => {
   try {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ error: 'Required fields missing' });
-    
+
     const existingUser = userDB.findByUsername(username);
     if (existingUser) return res.status(400).json({ error: 'Username already exists' });
 

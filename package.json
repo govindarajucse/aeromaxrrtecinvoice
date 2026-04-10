@@ -2,9 +2,10 @@
   "name": "aeromaxrr-invoice-root",
   "version": "1.0.0",
   "scripts": {
-    "install-all": "npm install && cd server && npm install && cd ../frontend && npm install --include=dev",
-    "build": "cd server && npm install && cd ../frontend && npm install --include=dev && npm run build",
-    "start": "cd server && npm start",
+    "install-all": "npm install && cd server && npm install && cd ../frontend && npm install",
+    "build": "npm install && cd frontend && npm install && npm run build",
+    "render-build": "npm run build && cd server && npm install",
+    "start": "cd server && node index.js",
     "dev": "npm run dev:server & npm run dev:frontend",
     "dev:server": "cd server && npm run dev",
     "dev:frontend": "cd frontend && npm run dev"
