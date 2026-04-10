@@ -30,6 +30,11 @@ function LoginForm({ onLogin }) {
         const text = await response.text()
         console.error('Server returned non-JSON response:', text)
         
+        // Log headers for diagnostic purposes
+        const headers = {}
+        response.headers.forEach((value, name) => { headers[name] = value })
+        console.log('Response Headers:', headers)
+
         // Try to find a more descriptive error in HTML if it's an Express error page
         let detail = ''
         if (text.includes('<pre>')) {
@@ -39,7 +44,9 @@ function LoginForm({ onLogin }) {
         }
         
         const preview = (detail || text).substring(0, 100).trim()
-        throw new Error(`Server configuration error (${response.status}): The server returned a webpage instead of data. Check if your API server is running correctly. (Detail: "${preview}...")`)
+        const sourceInfo = headers['x-source'] ? `[Source: ${headers['x-source']}]` : '[Source: External / Render Edge]'
+        
+        throw new Error(`${sourceInfo} Server configuration error (${response.status}): The server returned a webpage instead of data. Check if your API server is running correctly. (Detail: "${preview}...")`)
       }
     } catch (err) {
       setError(err.message)

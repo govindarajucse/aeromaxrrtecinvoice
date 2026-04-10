@@ -4,8 +4,8 @@
   "type": "module",
   "scripts": {
     "install-all": "npm install && cd frontend && npm install",
-    "build": "npm install && cd frontend && npm install && npm run build",
-    "render-build": "npm run build",
+    "build": "cd frontend && npm install && npm run build",
+    "render-build": "npm install && cd frontend && npm install && npm run build",
     "start": "node server/index.js",
     "dev": "npm run dev:server & npm run dev:frontend",
     "dev:server": "node --watch server/index.js",

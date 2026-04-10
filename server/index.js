@@ -143,17 +143,24 @@ function getFileExtension(filename) {
   return filename.substring(filename.lastIndexOf('.'))
 }
 
+// Global Diagnostic Header (Added to EVERY response)
+app.use((req, res, next) => {
+  res.setHeader('X-Source', 'Express-Backend-API');
+  res.setHeader('X-Request-Path', req.path);
+  next();
+});
+
+// Request Logging (Moved to top)
+app.use((req, res, next) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] ${req.method} ${req.path} (Host: ${req.headers.host})`);
+  next();
+});
+
 // Middleware
 app.use(cors())
 app.use(express.json())
 app.use(express.static(join(__dirname, 'public')))
-
-// Request Logging
-app.use((req, res, next) => {
-  const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] ${req.method} ${req.path}`);
-  next();
-});
 
 // Middleware to check if database is ready
 app.use((req, res, next) => {
@@ -164,11 +171,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// --- API ROUTES ---
-
-// Simple Health Test
-app.get('/api/test-server', (req, res) => {
-  res.json({ status: 'success', message: 'Server is alive', date: new Date().toISOString() });
+// Root API handler to prevent 404 falling through to HTML catch-all
+app.get('/api', (req, res) => {
+  res.json({ message: 'Welcome to Invoice API', version: '1.0.13', status: 'ready', timestamp: new Date().toISOString() });
 });
 
 // Debug Route for Render
@@ -181,20 +186,19 @@ app.get('/api/debug', (req, res) => {
     nodeEnv: process.env.NODE_ENV,
     dbReady,
     indexFound: existsSync(join(staticPath, 'index.html')),
+    headers: req.headers,
     timestamp: new Date().toISOString()
   });
 });
 
-// Root API handler to prevent 404 falling through to HTML catch-all
-app.get('/api', (req, res) => {
-  res.json({ message: 'Welcome to Invoice API', version: '1.0.12', status: 'ready' });
-});
 
 // Auth API
 app.post('/api/auth/login', async (req, res) => {
+  res.setHeader('X-Matched-Route', 'POST /api/auth/login');
   try {
     const { username, password } = req.body;
-    console.log(`[AUTH] Login attempt for: ${username}`);
+    console.log(`[AUTH] ✅ Login route HIT for: "${username}" at ${new Date().toISOString()}`);
+    console.log(`[AUTH] Content-Type: ${req.headers['content-type']}`);
     const user = userDB.findByUsername(username);
 
     if (!user) {
