@@ -407,268 +407,407 @@ export async function generateExcel(invoice) {
   const workbook = new ExcelJS.Workbook()
   const worksheet = workbook.addWorksheet('Invoice')
 
+  // Set page layout to A4
+  worksheet.pageSetup.paperSize = 9 // A4
+  worksheet.pageSetup.orientation = 'portrait'
+  worksheet.pageSetup.fitToPage = true
+  worksheet.pageSetup.fitToWidth = 1
+  worksheet.pageSetup.fitToHeight = 0
+  worksheet.pageSetup.margins = {
+    left: 0.25, right: 0.25, top: 0.25, bottom: 0.25, header: 0, footer: 0
+  }
+
+  // Set column widths for tax invoice format (A4 optimized)
   worksheet.columns = [
-    { width: 3 }, // A
-    { width: 5 }, // B S.No
-    { width: 40 }, // C Description
-    { width: 10 }, // D HSN
-    { width: 8 }, // E Qty
-    { width: 12 }, // F Rate
-    { width: 15 }, // G Amount
-    { width: 20 }, // H Label
-    { width: 15 }  // I Value
+    { width: 8 },   // A - Logo space
+    { width: 20 },  // B - Left column
+    { width: 25 },  // C
+    { width: 15 },  // D
+    { width: 5 },   // E - Spacer
+    { width: 20 },  // F - Right column
+    { width: 25 },  // G
+    { width: 15 },  // H
+    { width: 10 }   // I
   ]
 
   const borderStyle = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } }
-  const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } }
-  const headerFont = { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 }
+  const thickBorder = { top: { style: 'medium' }, left: { style: 'medium' }, bottom: { style: 'medium' }, right: { style: 'medium' } }
+  const boldStyle = { bold: true }
+  const centerAlign = { horizontal: 'center', vertical: 'middle' }
 
   let row = 1
 
-  // Logo and company header
+  // Add Company Logo - larger and properly positioned
   try {
     const logoPath = join(__dirname, 'public', 'logos');
     const logoFiles = readdirSync(logoPath).filter(f => f.startsWith('company-logo'));
     if (logoFiles.length > 0) {
       const fullLogoPath = join(logoPath, logoFiles[0]);
       const image = workbook.addImage({ filename: fullLogoPath, extension: extname(fullLogoPath).slice(1) || 'png' });
-      worksheet.addImage(image, 'B1:B4');
+      worksheet.addImage(image, {
+        tl: { col: 0, row: row - 1 },
+        br: { col: 1, row: row + 4 }
+      });
     }
   } catch (err) { }
 
-  worksheet.getCell('D2').value = invoice.companyName;
-  worksheet.getCell('D2').alignment = { horizontal: 'center', vertical: 'middle' };
-  worksheet.mergeCells('D2:I2');
-
-  worksheet.getCell('D3').value = invoice.companyAddress;
-  worksheet.getCell('D3').font = { size: 10 };
-  worksheet.getCell('D3').alignment = { horizontal: 'center', vertical: 'middle' };
-  worksheet.mergeCells('D3:I3');
-
-  worksheet.getCell('D4').value = 'GSTN: ' + invoice.companyGSTN + ' | Email: ' + invoice.companyEmail;
-  worksheet.getCell('D4').font = { size: 10 };
-  worksheet.getCell('D4').alignment = { horizontal: 'center', vertical: 'middle' };
-  worksheet.mergeCells('D4:I4');
-
-  row = 7;
-
-  // Bill To table (left side)
-  worksheet.getCell(`B${row}`).value = 'Bill To:'
-  worksheet.getCell(`B${row}`).font = { bold: true, size: 12 }
-  worksheet.getCell(`B${row}`).border = borderStyle
-  worksheet.mergeCells(`B${row}:C${row}`)
-
-  row++
-  worksheet.getCell(`B${row}`).value = invoice.clientName || ''
-  worksheet.getCell(`B${row}`).border = borderStyle
-  worksheet.mergeCells(`B${row}:C${row}`)
-
-  row++
-  // Address as a single cell, multi-line if needed
-  const excelAddress = (invoice.clientAddress || '').replace(/\r?\n/g, ', ');
-  worksheet.getCell(`B${row}`).value = excelAddress;
-  worksheet.getCell(`B${row}`).border = borderStyle;
-  worksheet.mergeCells(`B${row}:C${row}`);
-  row++
-  worksheet.getCell(`B${row}`).value = `GSTN: ${invoice.clientGSTN || ''}`
-  worksheet.getCell(`B${row}`).border = borderStyle
-  worksheet.mergeCells(`B${row}:C${row}`)
-
-  // Invoice Details table (right side)
-  let detailRow = 9
-  worksheet.getCell(`F${detailRow}`).value = 'Invoice Details:'
-  worksheet.getCell(`F${detailRow}`).font = { bold: true, size: 12 }
-  worksheet.getCell(`F${detailRow}`).border = borderStyle
-  worksheet.mergeCells(`F${detailRow}:I${detailRow}`)
-
-  detailRow++
-  worksheet.getCell(`F${detailRow}`).value = 'Invoice No:'
-  worksheet.getCell(`F${detailRow}`).font = { bold: true }
-  worksheet.getCell(`F${detailRow}`).border = borderStyle
-  worksheet.getCell(`G${detailRow}`).value = invoice.number || ''
-  worksheet.getCell(`G${detailRow}`).border = borderStyle
-  worksheet.mergeCells(`G${detailRow}:I${detailRow}`)
-
-  detailRow++
-  worksheet.getCell(`F${detailRow}`).value = 'Date:'
-  worksheet.getCell(`F${detailRow}`).font = { bold: true }
-  worksheet.getCell(`F${detailRow}`).border = borderStyle
-  worksheet.getCell(`G${detailRow}`).value = new Date(invoice.createdAt).toLocaleDateString('en-IN')
-  worksheet.getCell(`G${detailRow}`).border = borderStyle
-  worksheet.mergeCells(`G${detailRow}:I${detailRow}`)
-
-  detailRow++
-  worksheet.getCell(`F${detailRow}`).value = 'DC No:'
-  worksheet.getCell(`F${detailRow}`).font = { bold: true }
-  worksheet.getCell(`F${detailRow}`).border = borderStyle
-  worksheet.getCell(`G${detailRow}`).value = invoice.dcNumber || ''
-  worksheet.getCell(`G${detailRow}`).border = borderStyle
-  worksheet.mergeCells(`G${detailRow}:I${detailRow}`)
-
-  detailRow++
-  worksheet.getCell(`F${detailRow}`).value = 'PO No:'
-  worksheet.getCell(`F${detailRow}`).font = { bold: true }
-  worksheet.getCell(`F${detailRow}`).border = borderStyle
-  worksheet.getCell(`G${detailRow}`).value = invoice.poNumber || ''
-  worksheet.getCell(`G${detailRow}`).border = borderStyle
-  worksheet.mergeCells(`G${detailRow}:I${detailRow}`)
-
-  detailRow++
-  worksheet.getCell(`F${detailRow}`).value = 'Goods/Service:'
-  worksheet.getCell(`F${detailRow}`).font = { bold: true }
-  worksheet.getCell(`F${detailRow}`).border = borderStyle
-  worksheet.getCell(`G${detailRow}`).value = invoice.goodsService || 'Service'
-  worksheet.getCell(`G${detailRow}`).border = borderStyle
-  worksheet.mergeCells(`G${detailRow}:I${detailRow}`)
-
-  detailRow++
-  worksheet.getCell(`F${detailRow}`).value = 'State Code:'
-  worksheet.getCell(`F${detailRow}`).font = { bold: true }
-  worksheet.getCell(`F${detailRow}`).border = borderStyle
-  let stateCodeStr = '';
-  if (invoice.stateCode && invoice.stateName) {
-    stateCodeStr = `${invoice.stateCode} - ${invoice.stateName}`;
-  } else if (invoice.stateCode) {
-    stateCodeStr = `${invoice.stateCode}`;
-  } else if (invoice.stateName) {
-    stateCodeStr = `${invoice.stateName}`;
-  }
-  worksheet.getCell(`G${detailRow}`).value = stateCodeStr;
-  worksheet.getCell(`G${detailRow}`).border = borderStyle
-  worksheet.mergeCells(`G${detailRow}:I${detailRow}`)
-
-  row = Math.max(row, detailRow) + 2
-
-  // Table headers
-  const headerRow = worksheet.getRow(row)
-  headerRow.values = ['', 'S.No', 'Description', 'HSN', 'Qty', 'Rate', 'Amount']
-  headerRow.font = headerFont
-  headerRow.fill = headerFill
-  headerRow.height = 20
-  for (let col = 2; col <= 7; col++) {
-    headerRow.getCell(col).border = borderStyle
-    headerRow.getCell(col).alignment = { horizontal: 'center', vertical: 'center' }
-  }
+  // TAX INVOICE Header
+  worksheet.getCell(`B${row}`).value = 'TAX INVOICE'
+  worksheet.getCell(`B${row}`).font = { bold: true, size: 18 }
+  worksheet.getCell(`B${row}`).alignment = centerAlign
+  worksheet.getCell(`B${row}`).border = thickBorder
+  worksheet.mergeCells(`B${row}:I${row}`)
   row++
 
-  // Items
-  let subTotal = 0
-  if (invoice.lineItems && invoice.lineItems.length > 0) {
-    invoice.lineItems.forEach((item, idx) => {
-      const dataRow = worksheet.getRow(row)
-      dataRow.values = ['', idx + 1, item.description || '', item.hsnCode || '9988', item.qty || 0, item.rate || 0, item.amount || 0]
-      for (let col = 2; col <= 7; col++) {
-        dataRow.getCell(col).border = borderStyle
-        if (col >= 5) dataRow.getCell(col).alignment = { horizontal: 'right' }
-      }
-      subTotal += item.amount || 0
-      row++
-    })
-  }
-
-  row++
-
-
-  // --- Totals block: each label/value in its own cell, all dynamic ---
-  const igstRate = invoice.igstRate ?? 0;
-  const igstAmount = (subTotal * igstRate) / 100;
-  const roundOff = typeof invoice.roundOff === 'number' ? invoice.roundOff : 0;
-  const grandTotal = subTotal + cgstAmount + sgstAmount + igstAmount + roundOff;
-
-  const totals = [
-    ['Sub Total', subTotal],
-    [`CGST @${cgstRate}%`, cgstAmount],
-    [`SGST @${sgstRate}%`, sgstAmount],
-    [`IGST @${igstRate}%`, igstAmount],
-    ['Round Off', roundOff],
-    ['Grand Total', grandTotal]
-  ];
-
-  for (let i = 0; i < totals.length; i++) {
-    const isGrandTotal = i === totals.length - 1;
-    worksheet.getCell(`F${row}`).value = totals[i][0];
-    worksheet.getCell(`F${row}`).border = borderStyle;
-    worksheet.getCell(`F${row}`).alignment = { horizontal: 'left', vertical: 'middle' };
-    worksheet.getCell(`F${row}`).font = isGrandTotal ? { bold: true, size: 12 } : { bold: true };
-    worksheet.getCell(`G${row}`).value = typeof totals[i][1] === 'number' ? `₹ ${totals[i][1].toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : totals[i][1];
-    worksheet.getCell(`G${row}`).border = borderStyle;
-    worksheet.getCell(`G${row}`).alignment = { horizontal: 'right', vertical: 'middle' };
-    worksheet.getCell(`G${row}`).font = isGrandTotal ? { bold: true, size: 12 } : { bold: true };
-    worksheet.getRow(row).height = 18;
-    row++;
-  }
-
-  row++;
-
-  // Amount in words table
-  worksheet.getCell(`B${row}`).value = 'Amount in Words:'
-  worksheet.getCell(`B${row}`).font = { bold: true }
-  worksheet.getCell(`B${row}`).border = borderStyle
-  worksheet.mergeCells(`C${row}:I${row}`)
-  worksheet.getCell(`C${row}`).value = formatAmountInWords(grandTotal)
-  worksheet.getCell(`C${row}`).border = borderStyle
-  row++
-
-  // Remarks table
-  worksheet.getCell(`B${row}`).value = 'Remarks:'
-  worksheet.getCell(`B${row}`).font = { bold: true }
-  worksheet.getCell(`B${row}`).border = borderStyle
-  worksheet.mergeCells(`C${row}:I${row}`)
-  worksheet.getCell(`C${row}`).value = invoice.notes || ''
-  worksheet.getCell(`C${row}`).border = borderStyle
-  row++
-
-  // Bank details table
-  worksheet.getCell(`B${row}`).value = 'Bank Details:'
-  worksheet.getCell(`B${row}`).font = { bold: true }
+  // Company Header Section
+  worksheet.getCell(`B${row}`).value = invoice.companyName || ''
+  worksheet.getCell(`B${row}`).font = { bold: true, size: 14 }
+  worksheet.getCell(`B${row}`).alignment = centerAlign
   worksheet.getCell(`B${row}`).border = borderStyle
   worksheet.mergeCells(`B${row}:I${row}`)
   row++
 
-  // Dynamic bank details from invoice object
-  const bankName = invoice.bankName || 'Bank Name:';
-  const bankBranch = invoice.bankBranch || 'Branch:';
-  const accountNo = invoice.accountNo || 'Account No:';
-  const ifscCode = invoice.ifscCode || 'IFSC Code:';
+  worksheet.getCell(`B${row}`).value = invoice.companyAddress || ''
+  worksheet.getCell(`B${row}`).font = { size: 9 }
+  worksheet.getCell(`B${row}`).alignment = { horizontal: 'left', vertical: 'top', wrapText: true }
+  worksheet.getCell(`B${row}`).border = borderStyle
+  worksheet.mergeCells(`B${row}:I${row}`)
+  row++
 
-  worksheet.getCell(`B${row}`).value = `Bank Name: ${bankName}`;
-  worksheet.getCell(`B${row}`).border = borderStyle;
-  worksheet.mergeCells(`B${row}:I${row}`);
-  row++;
+  const gstnEmail = []
+  if (invoice.companyGSTN) gstnEmail.push(`GSTN: ${invoice.companyGSTN}`)
+  if (invoice.companyEmail) gstnEmail.push(`Email: ${invoice.companyEmail}`)
+  worksheet.getCell(`B${row}`).value = gstnEmail.join(' | ')
+  worksheet.getCell(`B${row}`).font = { size: 9 }
+  worksheet.getCell(`B${row}`).alignment = centerAlign
+  worksheet.getCell(`B${row}`).border = borderStyle
+  worksheet.mergeCells(`B${row}:I${row}`)
+  row += 2
 
-  worksheet.getCell(`B${row}`).value = `Branch: ${bankBranch}`;
-  worksheet.getCell(`B${row}`).border = borderStyle;
-  worksheet.mergeCells(`B${row}:I${row}`);
-  row++;
+  // Side-by-side Customer Details (Left) and Invoice Details (Right)
+  const customerStartRow = row
+  const invoiceStartRow = row
 
-  worksheet.getCell(`B${row}`).value = `Account No: ${accountNo}`;
-  worksheet.getCell(`B${row}`).border = borderStyle;
-  worksheet.mergeCells(`B${row}:I${row}`);
-  row++;
+  // Customer Details Section (Left side - columns B-D)
+  worksheet.getCell(`B${customerStartRow}`).value = 'Customer Details:'
+  worksheet.getCell(`B${customerStartRow}`).font = boldStyle
+  worksheet.getCell(`B${customerStartRow}`).border = borderStyle
+  worksheet.mergeCells(`B${customerStartRow}:D${customerStartRow}`)
 
-  worksheet.getCell(`B${row}`).value = `IFSC Code: ${ifscCode}`;
-  worksheet.getCell(`B${row}`).border = borderStyle;
-  worksheet.mergeCells(`B${row}:I${row}`);
-  row++;
+  // Customer Name
+  worksheet.getCell(`B${customerStartRow + 1}`).value = 'Customer Name:'
+  worksheet.getCell(`B${customerStartRow + 1}`).font = boldStyle
+  worksheet.getCell(`B${customerStartRow + 1}`).border = borderStyle
+  worksheet.getCell(`C${customerStartRow + 1}`).value = invoice.clientName || ''
+  worksheet.getCell(`C${customerStartRow + 1}`).border = borderStyle
+  worksheet.mergeCells(`C${customerStartRow + 1}:D${customerStartRow + 1}`)
 
-  // Jurisdiction and signatures in two boxes
+  // Customer Address
+  worksheet.getCell(`B${customerStartRow + 2}`).value = 'Customer Address:'
+  worksheet.getCell(`B${customerStartRow + 2}`).font = boldStyle
+  worksheet.getCell(`B${customerStartRow + 2}`).border = borderStyle
+  const customerAddress = (invoice.clientAddress || '').replace(/\r?\n/g, ', ')
+  worksheet.getCell(`C${customerStartRow + 2}`).value = customerAddress
+  worksheet.getCell(`C${customerStartRow + 2}`).border = borderStyle
+  worksheet.mergeCells(`C${customerStartRow + 2}:D${customerStartRow + 2}`)
+
+  // PinCode
+  worksheet.getCell(`B${customerStartRow + 3}`).value = 'PinCode:'
+  worksheet.getCell(`B${customerStartRow + 3}`).font = boldStyle
+  worksheet.getCell(`B${customerStartRow + 3}`).border = borderStyle
+  worksheet.getCell(`C${customerStartRow + 3}`).value = invoice.clientPinCode || ''
+  worksheet.getCell(`C${customerStartRow + 3}`).border = borderStyle
+  worksheet.mergeCells(`C${customerStartRow + 3}:D${customerStartRow + 3}`)
+
+  // State
+  worksheet.getCell(`B${customerStartRow + 4}`).value = 'State:'
+  worksheet.getCell(`B${customerStartRow + 4}`).font = boldStyle
+  worksheet.getCell(`B${customerStartRow + 4}`).border = borderStyle
+  worksheet.getCell(`C${customerStartRow + 4}`).value = invoice.clientState || ''
+  worksheet.getCell(`C${customerStartRow + 4}`).border = borderStyle
+  worksheet.mergeCells(`C${customerStartRow + 4}:D${customerStartRow + 4}`)
+
+  // Customer GSTN
+  worksheet.getCell(`B${customerStartRow + 5}`).value = 'GSTN:'
+  worksheet.getCell(`B${customerStartRow + 5}`).font = boldStyle
+  worksheet.getCell(`B${customerStartRow + 5}`).border = borderStyle
+  worksheet.getCell(`C${customerStartRow + 5}`).value = invoice.clientGSTN || ''
+  worksheet.getCell(`C${customerStartRow + 5}`).border = borderStyle
+  worksheet.mergeCells(`C${customerStartRow + 5}:D${customerStartRow + 5}`)
+
+  // State Code
+  worksheet.getCell(`B${customerStartRow + 6}`).value = 'State Code:'
+  worksheet.getCell(`B${customerStartRow + 6}`).font = boldStyle
+  worksheet.getCell(`B${customerStartRow + 6}`).border = borderStyle
+  worksheet.getCell(`C${customerStartRow + 6}`).value = invoice.clientStateCode || ''
+  worksheet.getCell(`C${customerStartRow + 6}`).border = borderStyle
+  worksheet.mergeCells(`C${customerStartRow + 6}:D${customerStartRow + 6}`)
+
+  // Invoice Details Section (Right side - columns F-H)
+  worksheet.getCell(`F${invoiceStartRow}`).value = 'Invoice Details:'
+  worksheet.getCell(`F${invoiceStartRow}`).font = boldStyle
+  worksheet.getCell(`F${invoiceStartRow}`).border = borderStyle
+  worksheet.mergeCells(`F${invoiceStartRow}:H${invoiceStartRow}`)
+
+  // Invoice Number
+  worksheet.getCell(`F${invoiceStartRow + 1}`).value = 'Invoice No:'
+  worksheet.getCell(`F${invoiceStartRow + 1}`).font = boldStyle
+  worksheet.getCell(`F${invoiceStartRow + 1}`).border = borderStyle
+  worksheet.getCell(`G${invoiceStartRow + 1}`).value = invoice.number || ''
+  worksheet.getCell(`G${invoiceStartRow + 1}`).border = borderStyle
+  worksheet.mergeCells(`G${invoiceStartRow + 1}:H${invoiceStartRow + 1}`)
+
+  // Invoice Date
+  worksheet.getCell(`F${invoiceStartRow + 2}`).value = 'Invoice Date:'
+  worksheet.getCell(`F${invoiceStartRow + 2}`).font = boldStyle
+  worksheet.getCell(`F${invoiceStartRow + 2}`).border = borderStyle
+  const invoiceDate = invoice.invoiceDate ? new Date(invoice.invoiceDate).toLocaleDateString('en-IN') : new Date().toLocaleDateString('en-IN')
+  worksheet.getCell(`G${invoiceStartRow + 2}`).value = invoiceDate
+  worksheet.getCell(`G${invoiceStartRow + 2}`).border = borderStyle
+  worksheet.mergeCells(`G${invoiceStartRow + 2}:H${invoiceStartRow + 2}`)
+
+  // DC Number
+  worksheet.getCell(`F${invoiceStartRow + 3}`).value = 'Your DC No:'
+  worksheet.getCell(`F${invoiceStartRow + 3}`).font = boldStyle
+  worksheet.getCell(`F${invoiceStartRow + 3}`).border = borderStyle
+  worksheet.getCell(`G${invoiceStartRow + 3}`).value = invoice.dcNumber || ''
+  worksheet.getCell(`G${invoiceStartRow + 3}`).border = borderStyle
+  worksheet.mergeCells(`G${invoiceStartRow + 3}:H${invoiceStartRow + 3}`)
+
+  // PO Number
+  worksheet.getCell(`F${invoiceStartRow + 4}`).value = 'PO No:'
+  worksheet.getCell(`F${invoiceStartRow + 4}`).font = boldStyle
+  worksheet.getCell(`F${invoiceStartRow + 4}`).border = borderStyle
+  worksheet.getCell(`G${invoiceStartRow + 4}`).value = invoice.poNumber || ''
+  worksheet.getCell(`G${invoiceStartRow + 4}`).border = borderStyle
+  worksheet.mergeCells(`G${invoiceStartRow + 4}:H${invoiceStartRow + 4}`)
+
+  // Goods/Service
+  worksheet.getCell(`F${invoiceStartRow + 5}`).value = 'Goods/Service:'
+  worksheet.getCell(`F${invoiceStartRow + 5}`).font = boldStyle
+  worksheet.getCell(`F${invoiceStartRow + 5}`).border = borderStyle
+  worksheet.getCell(`G${invoiceStartRow + 5}`).value = invoice.goodsService || 'Service'
+  worksheet.getCell(`G${invoiceStartRow + 5}`).border = borderStyle
+  worksheet.mergeCells(`G${invoiceStartRow + 5}:H${invoiceStartRow + 5}`)
+
+  row = customerStartRow + 8
+
+  // Item Details Table Header
+  const headers = ['Sl No', 'Item Description', 'HSN Code', 'Qty', 'Rate', 'Amount']
+  worksheet.getCell(`B${row}`).value = headers[0]
+  worksheet.getCell(`B${row}`).font = boldStyle
+  worksheet.getCell(`B${row}`).border = borderStyle
+  worksheet.getCell(`B${row}`).alignment = centerAlign
+
+  worksheet.getCell(`C${row}`).value = headers[1]
+  worksheet.getCell(`C${row}`).font = boldStyle
+  worksheet.getCell(`C${row}`).border = borderStyle
+  worksheet.mergeCells(`C${row}:D${row}`)
+
+  worksheet.getCell(`E${row}`).value = headers[2]
+  worksheet.getCell(`E${row}`).font = boldStyle
+  worksheet.getCell(`E${row}`).border = borderStyle
+  worksheet.getCell(`E${row}`).alignment = centerAlign
+
+  worksheet.getCell(`F${row}`).value = headers[3]
+  worksheet.getCell(`F${row}`).font = boldStyle
+  worksheet.getCell(`F${row}`).border = borderStyle
+  worksheet.getCell(`F${row}`).alignment = centerAlign
+
+  worksheet.getCell(`G${row}`).value = headers[4]
+  worksheet.getCell(`G${row}`).font = boldStyle
+  worksheet.getCell(`G${row}`).border = borderStyle
+  worksheet.getCell(`G${row}`).alignment = centerAlign
+
+  worksheet.getCell(`H${row}`).value = headers[5]
+  worksheet.getCell(`H${row}`).font = boldStyle
+  worksheet.getCell(`H${row}`).border = borderStyle
+  worksheet.getCell(`H${row}`).alignment = centerAlign
+  worksheet.mergeCells(`H${row}:I${row}`)
+  row++
+
+  // Item Details
+  let subTotal = 0
+  let totalQty = 0
+  const itemCount = invoice.lineItems?.length || 0
+
+  if (itemCount > 0) {
+    invoice.lineItems.forEach((item, idx) => {
+      worksheet.getCell(`B${row}`).value = idx + 1
+      worksheet.getCell(`B${row}`).border = borderStyle
+      worksheet.getCell(`B${row}`).alignment = centerAlign
+
+      worksheet.getCell(`C${row}`).value = item.description || ''
+      worksheet.getCell(`C${row}`).border = borderStyle
+      worksheet.mergeCells(`C${row}:D${row}`)
+
+      worksheet.getCell(`E${row}`).value = item.hsnCode || ''
+      worksheet.getCell(`E${row}`).border = borderStyle
+      worksheet.getCell(`E${row}`).alignment = centerAlign
+
+      worksheet.getCell(`F${row}`).value = item.qty || 0
+      worksheet.getCell(`F${row}`).border = borderStyle
+      worksheet.getCell(`F${row}`).alignment = centerAlign
+
+      worksheet.getCell(`G${row}`).value = item.rate || 0
+      worksheet.getCell(`G${row}`).border = borderStyle
+      worksheet.getCell(`G${row}`).alignment = centerAlign
+
+      worksheet.getCell(`H${row}`).value = item.amount || 0
+      worksheet.getCell(`H${row}`).border = borderStyle
+      worksheet.getCell(`H${row}`).alignment = centerAlign
+      worksheet.mergeCells(`H${row}:I${row}`)
+
+      subTotal += item.amount || 0
+      totalQty += item.qty || 0
+      row++
+    })
+  }
+
+  // Total Quantity row - right aligned under Rate column (G)
+  worksheet.getCell(`G${row}`).value = 'Total Quantity:'
+  worksheet.getCell(`G${row}`).font = boldStyle
+  worksheet.getCell(`G${row}`).border = borderStyle
+  worksheet.getCell(`G${row}`).alignment = { horizontal: 'right' }
+  worksheet.getCell(`H${row}`).value = totalQty
+  worksheet.getCell(`H${row}`).font = boldStyle
+  worksheet.getCell(`H${row}`).border = borderStyle
+  worksheet.getCell(`H${row}`).alignment = centerAlign
+  worksheet.mergeCells(`H${row}:I${row}`)
+  row += 2
+
+  // Bank Details Section
+  worksheet.getCell(`B${row}`).value = 'Bank Details:'
+  worksheet.getCell(`B${row}`).font = boldStyle
+  worksheet.getCell(`B${row}`).border = borderStyle
+  worksheet.mergeCells(`B${row}:I${row}`)
+  row++
+
+  worksheet.getCell(`B${row}`).value = 'Bank Name:'
+  worksheet.getCell(`B${row}`).font = boldStyle
+  worksheet.getCell(`B${row}`).border = borderStyle
+  worksheet.getCell(`C${row}`).value = invoice.bankName || ''
+  worksheet.getCell(`C${row}`).border = borderStyle
+  worksheet.mergeCells(`C${row}:I${row}`)
+  row++
+
+  worksheet.getCell(`B${row}`).value = 'Branch:'
+  worksheet.getCell(`B${row}`).font = boldStyle
+  worksheet.getCell(`B${row}`).border = borderStyle
+  worksheet.getCell(`C${row}`).value = invoice.bankBranch || ''
+  worksheet.getCell(`C${row}`).border = borderStyle
+  worksheet.mergeCells(`C${row}:I${row}`)
+  row++
+
+  worksheet.getCell(`B${row}`).value = 'A/C No:'
+  worksheet.getCell(`B${row}`).font = boldStyle
+  worksheet.getCell(`B${row}`).border = borderStyle
+  worksheet.getCell(`C${row}`).value = invoice.accountNo || ''
+  worksheet.getCell(`C${row}`).border = borderStyle
+  worksheet.mergeCells(`C${row}:I${row}`)
+  row++
+
+  worksheet.getCell(`B${row}`).value = 'IFSC Code:'
+  worksheet.getCell(`B${row}`).font = boldStyle
+  worksheet.getCell(`B${row}`).border = borderStyle
+  worksheet.getCell(`C${row}`).value = invoice.ifscCode || ''
+  worksheet.getCell(`C${row}`).border = borderStyle
+  worksheet.mergeCells(`C${row}:I${row}`)
+  row += 2
+
+  // Summary Section - right aligned under Rate column (G)
+  worksheet.getCell(`G${row}`).value = 'Summary of Amounts:'
+  worksheet.getCell(`G${row}`).font = boldStyle
+  worksheet.getCell(`G${row}`).border = borderStyle
+  worksheet.mergeCells(`G${row}:H${row}`)
+  row++
+
+  // Calculate taxes
+  const cgstRate = invoice.cgstRate ?? 6
+  const cgstAmount = (subTotal * cgstRate) / 100
+  const sgstRate = invoice.sgstRate ?? 6
+  const sgstAmount = (subTotal * sgstRate) / 100
+  const igstRate = invoice.igstRate ?? 0
+  const igstAmount = (subTotal * igstRate) / 100
+  const roundOff = typeof invoice.roundOff === 'number' ? invoice.roundOff : 0.20
+  const grandTotal = subTotal + cgstAmount + sgstAmount + igstAmount + roundOff
+
+  const summaryItems = [
+    { label: 'Sub Total', value: subTotal },
+    { label: 'Net Total', value: subTotal },
+    { label: `CGST @${cgstRate}%`, value: cgstAmount },
+    { label: `SGST @${sgstRate}%`, value: sgstAmount },
+    { label: 'IGST', value: igstAmount },
+    { label: 'Round Off', value: roundOff },
+    { label: 'Grand Total', value: grandTotal, bold: true }
+  ]
+
+  summaryItems.forEach(item => {
+    worksheet.getCell(`G${row}`).value = item.label + ':'
+    worksheet.getCell(`G${row}`).font = item.bold ? { bold: true, size: 12 } : boldStyle
+    worksheet.getCell(`G${row}`).border = borderStyle
+    worksheet.getCell(`G${row}`).alignment = { horizontal: 'right' }
+    worksheet.getCell(`H${row}`).value = item.value.toFixed(2)
+    worksheet.getCell(`H${row}`).font = item.bold ? { bold: true, size: 12 } : boldStyle
+    worksheet.getCell(`H${row}`).border = borderStyle
+    worksheet.getCell(`H${row}`).alignment = centerAlign
+    worksheet.mergeCells(`H${row}:I${row}`)
+    row++
+  })
+
+  row += 2
+
+  // Amount in Words
+  worksheet.getCell(`B${row}`).value = 'Rupees in Words:'
+  worksheet.getCell(`B${row}`).font = boldStyle
+  worksheet.getCell(`B${row}`).border = borderStyle
+  worksheet.mergeCells(`B${row}:I${row}`)
+  row++
+  worksheet.getCell(`B${row}`).value = formatAmountInWords(grandTotal)
+  worksheet.getCell(`B${row}`).border = borderStyle
+  worksheet.mergeCells(`B${row}:I${row}`)
+  row++
+
+  // Remarks
+  worksheet.getCell(`B${row}`).value = 'Remark:'
+  worksheet.getCell(`B${row}`).font = boldStyle
+  worksheet.getCell(`B${row}`).border = borderStyle
+  worksheet.mergeCells(`B${row}:I${row}`)
+  row++
+  worksheet.getCell(`B${row}`).value = invoice.notes || ''
+  worksheet.getCell(`B${row}`).border = borderStyle
+  worksheet.mergeCells(`B${row}:I${row}`)
+  row += 2
+
+  // Footer - split into two sections
   worksheet.getCell(`B${row}`).value = 'Subject to Bangalore Jurisdiction'
   worksheet.getCell(`B${row}`).border = borderStyle
   worksheet.mergeCells(`B${row}:E${row}`)
-  worksheet.getCell(`B${row + 1}`).value = 'Receiver\'s Signature & Seal'
-  worksheet.getCell(`B${row + 1}`).border = borderStyle
-  worksheet.mergeCells(`B${row + 1}:E${row + 1}`)
-
-  worksheet.getCell(`F${row}`).value = invoice.companyName ? `For ${invoice.companyName}` : 'For ____________________'
+  worksheet.getCell(`F${row}`).value = `For ${invoice.companyName || 'AEROMAXRR TEC'}`
   worksheet.getCell(`F${row}`).border = borderStyle
   worksheet.getCell(`F${row}`).alignment = { horizontal: 'right' }
   worksheet.mergeCells(`F${row}:I${row}`)
-  worksheet.getCell(`F${row + 1}`).value = 'Authorised Signatory'
-  worksheet.getCell(`F${row + 1}`).border = borderStyle
-  worksheet.getCell(`F${row + 1}`).alignment = { horizontal: 'right' }
-  worksheet.mergeCells(`F${row + 1}:I${row + 1}`)
+  row++
 
-  row += 2
+  worksheet.getCell(`B${row}`).value = 'Receiver\'s Signature & Seal'
+  worksheet.getCell(`B${row}`).border = borderStyle
+  worksheet.mergeCells(`B${row}:E${row}`)
+  worksheet.getCell(`F${row}`).value = 'Authorised Signatory'
+  worksheet.getCell(`F${row}`).border = borderStyle
+  worksheet.getCell(`F${row}`).alignment = { horizontal: 'right' }
+  worksheet.mergeCells(`F${row}:I${row}`)
+
+  // Add overall border around the entire content area
+  const contentStartRow = 1
+  const contentEndRow = row
+  for (let r = contentStartRow; r <= contentEndRow; r++) {
+    for (let c = 2; c <= 9; c++) {
+      const cell = worksheet.getCell(r, c)
+      if (!cell.border) {
+        cell.border = borderStyle
+      }
+    }
+  }
 
   return await workbook.xlsx.writeBuffer()
 }
