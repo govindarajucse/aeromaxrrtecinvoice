@@ -435,6 +435,13 @@ export async function generateExcel(invoice) {
   const boldStyle = { bold: true }
   const centerAlign = { horizontal: 'center', vertical: 'middle' }
 
+  // Professional color scheme
+  const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2E5090' } }
+  const headerFont = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 }
+  const sectionHeaderFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE7E6E6' } }
+  const sectionHeaderFont = { bold: true, color: { argb: 'FF000000' }, size: 10 }
+  const grandTotalFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC6EFCE' } }
+
   let row = 1
 
   // Add Company Logo - larger and properly positioned
@@ -451,24 +458,25 @@ export async function generateExcel(invoice) {
     }
   } catch (err) { }
 
-  // TAX INVOICE Header
+  // TAX INVOICE Header with professional styling
   worksheet.getCell(`B${row}`).value = 'TAX INVOICE'
-  worksheet.getCell(`B${row}`).font = { bold: true, size: 18 }
+  worksheet.getCell(`B${row}`).font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 18 }
   worksheet.getCell(`B${row}`).alignment = centerAlign
   worksheet.getCell(`B${row}`).border = thickBorder
+  worksheet.getCell(`B${row}`).fill = headerFill
   worksheet.mergeCells(`B${row}:I${row}`)
   row++
 
   // Company Header Section
   worksheet.getCell(`B${row}`).value = invoice.companyName || ''
-  worksheet.getCell(`B${row}`).font = { bold: true, size: 14 }
+  worksheet.getCell(`B${row}`).font = { bold: true, size: 14, color: { argb: 'FF2E5090' } }
   worksheet.getCell(`B${row}`).alignment = centerAlign
   worksheet.getCell(`B${row}`).border = borderStyle
   worksheet.mergeCells(`B${row}:I${row}`)
   row++
 
   worksheet.getCell(`B${row}`).value = invoice.companyAddress || ''
-  worksheet.getCell(`B${row}`).font = { size: 9 }
+  worksheet.getCell(`B${row}`).font = { size: 9, color: { argb: 'FF000000' } }
   worksheet.getCell(`B${row}`).alignment = { horizontal: 'left', vertical: 'top', wrapText: true }
   worksheet.getCell(`B${row}`).border = borderStyle
   worksheet.mergeCells(`B${row}:I${row}`)
@@ -478,7 +486,7 @@ export async function generateExcel(invoice) {
   if (invoice.companyGSTN) gstnEmail.push(`GSTN: ${invoice.companyGSTN}`)
   if (invoice.companyEmail) gstnEmail.push(`Email: ${invoice.companyEmail}`)
   worksheet.getCell(`B${row}`).value = gstnEmail.join(' | ')
-  worksheet.getCell(`B${row}`).font = { size: 9 }
+  worksheet.getCell(`B${row}`).font = { size: 9, color: { argb: 'FF666666' } }
   worksheet.getCell(`B${row}`).alignment = centerAlign
   worksheet.getCell(`B${row}`).border = borderStyle
   worksheet.mergeCells(`B${row}:I${row}`)
@@ -490,7 +498,8 @@ export async function generateExcel(invoice) {
 
   // Customer Details Section (Left side - columns B-D)
   worksheet.getCell(`B${customerStartRow}`).value = 'Customer Details:'
-  worksheet.getCell(`B${customerStartRow}`).font = boldStyle
+  worksheet.getCell(`B${customerStartRow}`).font = sectionHeaderFont
+  worksheet.getCell(`B${customerStartRow}`).fill = sectionHeaderFill
   worksheet.getCell(`B${customerStartRow}`).border = borderStyle
   worksheet.mergeCells(`B${customerStartRow}:D${customerStartRow}`)
 
@@ -545,7 +554,8 @@ export async function generateExcel(invoice) {
 
   // Invoice Details Section (Right side - columns F-H)
   worksheet.getCell(`F${invoiceStartRow}`).value = 'Invoice Details:'
-  worksheet.getCell(`F${invoiceStartRow}`).font = boldStyle
+  worksheet.getCell(`F${invoiceStartRow}`).font = sectionHeaderFont
+  worksheet.getCell(`F${invoiceStartRow}`).fill = sectionHeaderFill
   worksheet.getCell(`F${invoiceStartRow}`).border = borderStyle
   worksheet.mergeCells(`F${invoiceStartRow}:H${invoiceStartRow}`)
 
@@ -592,35 +602,41 @@ export async function generateExcel(invoice) {
 
   row = customerStartRow + 8
 
-  // Item Details Table Header
+  // Item Details Table Header with professional styling
   const headers = ['Sl No', 'Item Description', 'HSN Code', 'Qty', 'Rate', 'Amount']
   worksheet.getCell(`B${row}`).value = headers[0]
-  worksheet.getCell(`B${row}`).font = boldStyle
+  worksheet.getCell(`B${row}`).font = headerFont
+  worksheet.getCell(`B${row}`).fill = headerFill
   worksheet.getCell(`B${row}`).border = borderStyle
   worksheet.getCell(`B${row}`).alignment = centerAlign
 
   worksheet.getCell(`C${row}`).value = headers[1]
-  worksheet.getCell(`C${row}`).font = boldStyle
+  worksheet.getCell(`C${row}`).font = headerFont
+  worksheet.getCell(`C${row}`).fill = headerFill
   worksheet.getCell(`C${row}`).border = borderStyle
   worksheet.mergeCells(`C${row}:D${row}`)
 
   worksheet.getCell(`E${row}`).value = headers[2]
-  worksheet.getCell(`E${row}`).font = boldStyle
+  worksheet.getCell(`E${row}`).font = headerFont
+  worksheet.getCell(`E${row}`).fill = headerFill
   worksheet.getCell(`E${row}`).border = borderStyle
   worksheet.getCell(`E${row}`).alignment = centerAlign
 
   worksheet.getCell(`F${row}`).value = headers[3]
-  worksheet.getCell(`F${row}`).font = boldStyle
+  worksheet.getCell(`F${row}`).font = headerFont
+  worksheet.getCell(`F${row}`).fill = headerFill
   worksheet.getCell(`F${row}`).border = borderStyle
   worksheet.getCell(`F${row}`).alignment = centerAlign
 
   worksheet.getCell(`G${row}`).value = headers[4]
-  worksheet.getCell(`G${row}`).font = boldStyle
+  worksheet.getCell(`G${row}`).font = headerFont
+  worksheet.getCell(`G${row}`).fill = headerFill
   worksheet.getCell(`G${row}`).border = borderStyle
   worksheet.getCell(`G${row}`).alignment = centerAlign
 
   worksheet.getCell(`H${row}`).value = headers[5]
-  worksheet.getCell(`H${row}`).font = boldStyle
+  worksheet.getCell(`H${row}`).font = headerFont
+  worksheet.getCell(`H${row}`).fill = headerFill
   worksheet.getCell(`H${row}`).border = borderStyle
   worksheet.getCell(`H${row}`).alignment = centerAlign
   worksheet.mergeCells(`H${row}:I${row}`)
@@ -676,9 +692,10 @@ export async function generateExcel(invoice) {
   worksheet.mergeCells(`H${row}:I${row}`)
   row += 2
 
-  // Bank Details Section
+  // Bank Details Section with professional styling
   worksheet.getCell(`B${row}`).value = 'Bank Details:'
-  worksheet.getCell(`B${row}`).font = boldStyle
+  worksheet.getCell(`B${row}`).font = sectionHeaderFont
+  worksheet.getCell(`B${row}`).fill = sectionHeaderFill
   worksheet.getCell(`B${row}`).border = borderStyle
   worksheet.mergeCells(`B${row}:I${row}`)
   row++
@@ -715,9 +732,10 @@ export async function generateExcel(invoice) {
   worksheet.mergeCells(`C${row}:I${row}`)
   row += 2
 
-  // Summary Section - right aligned under Rate column (G)
+  // Summary Section - right aligned under Rate column (G) with professional styling
   worksheet.getCell(`G${row}`).value = 'Summary of Amounts:'
-  worksheet.getCell(`G${row}`).font = boldStyle
+  worksheet.getCell(`G${row}`).font = sectionHeaderFont
+  worksheet.getCell(`G${row}`).fill = sectionHeaderFill
   worksheet.getCell(`G${row}`).border = borderStyle
   worksheet.mergeCells(`G${row}:H${row}`)
   row++
@@ -744,13 +762,19 @@ export async function generateExcel(invoice) {
 
   summaryItems.forEach(item => {
     worksheet.getCell(`G${row}`).value = item.label + ':'
-    worksheet.getCell(`G${row}`).font = item.bold ? { bold: true, size: 12 } : boldStyle
+    worksheet.getCell(`G${row}`).font = item.bold ? { bold: true, size: 12, color: { argb: 'FF006100' } } : boldStyle
     worksheet.getCell(`G${row}`).border = borderStyle
     worksheet.getCell(`G${row}`).alignment = { horizontal: 'right' }
+    if (item.bold) {
+      worksheet.getCell(`G${row}`).fill = grandTotalFill
+    }
     worksheet.getCell(`H${row}`).value = item.value.toFixed(2)
-    worksheet.getCell(`H${row}`).font = item.bold ? { bold: true, size: 12 } : boldStyle
+    worksheet.getCell(`H${row}`).font = item.bold ? { bold: true, size: 12, color: { argb: 'FF006100' } } : boldStyle
     worksheet.getCell(`H${row}`).border = borderStyle
     worksheet.getCell(`H${row}`).alignment = centerAlign
+    if (item.bold) {
+      worksheet.getCell(`H${row}`).fill = grandTotalFill
+    }
     worksheet.mergeCells(`H${row}:I${row}`)
     row++
   })

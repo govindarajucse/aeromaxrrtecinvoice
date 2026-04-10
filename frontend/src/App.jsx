@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react'
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom'
 import InvoiceList from './components/InvoiceList'
 import InvoiceForm from './components/InvoiceForm'
 import CompanyForm from './components/CompanyForm'
 import ServiceForm from './components/ServiceForm'
 import LoginForm from './components/LoginForm'
+import Dashboard from './pages/Dashboard'
 
 const API_URL = '/api'
 
@@ -306,8 +308,10 @@ function App() {
   }
 
   return (
-    <div className="app">
-      <header className="app-header">
+    <Router>
+      <div className="app">
+        <div className="app-content">
+          <header className="app-header">
         <div className="header-content">
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             {logoUrl ? (
@@ -317,23 +321,25 @@ function App() {
             )}
             <div>
               <h1>{companies.length > 0 ? `${companies[0].name} ` : 'Invoice Manager'}</h1>
-              <span className="user-badge">👤 {user?.username}</span>
             </div>
           </div>
           <div className="header-actions" style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
-            <button 
-              className="btn btn-secondary"
-              onClick={() => setShowServicesModal(true)}
-              title="Manage Services"
-            >
-              🛠️ Services
-            </button>
+            <Link to="/" className="btn btn-secondary nav-link">
+              📊 Dashboard
+            </Link>
             <button 
               className="btn btn-secondary"
               onClick={() => setShowCompaniesModal(true)}
               title="Manage Companies"
             >
               🏢 Companies
+            </button>
+            <button 
+              className="btn btn-secondary"
+              onClick={() => setShowServicesModal(true)}
+              title="Manage Services"
+            >
+              🛠️ Services
             </button>
             <button 
               className="btn btn-secondary"
@@ -347,7 +353,7 @@ function App() {
               onClick={() => setShowLogoUpload(!showLogoUpload)}
               title={logoUrl ? "Change logo" : "Upload logo"}
             >
-              📁 Logo
+              📁 Upload Logo
             </button>
             <button 
               className="btn btn-primary"
@@ -359,12 +365,12 @@ function App() {
               ➕ New Invoice
             </button>
             <button 
-              className="btn btn-danger"
+              className="btn btn-secondary user-badge-btn"
               onClick={handleLogout}
-              title="Sign Out"
-              style={{ padding: '8px 12px', fontSize: '18px' }}
+              title="Click to logout"
+              style={{ padding: '8px 16px', fontSize: '14px' }}
             >
-              🚪
+              👤 {user?.username}
             </button>
           </div>
         </div>
@@ -413,22 +419,35 @@ function App() {
 
         {loading && <div className="loading-spinner">Loading dashboard layer...</div>}
 
+        {!loading && (
+          <Routes>
+            <Route path="/" element={
+              <Dashboard
+                token={token}
+                invoices={invoices}
+                onEdit={handleEditInvoice}
+                onDelete={handleDeleteInvoice}
+                onStatusChange={handleUpdateStatus}
+              />
+            } />
+            <Route path="*" element={
+              <Dashboard
+                token={token}
+                invoices={invoices}
+                onEdit={handleEditInvoice}
+                onDelete={handleDeleteInvoice}
+                onStatusChange={handleUpdateStatus}
+              />
+            } />
+          </Routes>
+        )}
+
         {showForm && (
           <InvoiceForm
             invoice={editingInvoice}
             token={token}
             onSubmit={editingInvoice ? handleUpdateInvoice : handleAddInvoice}
             onCancel={handleCloseForm}
-          />
-        )}
-
-        {!loading && (
-          <InvoiceList
-            invoices={invoices}
-            token={token}
-            onEdit={handleEditInvoice}
-            onDelete={handleDeleteInvoice}
-            onStatusChange={handleUpdateStatus}
           />
         )}
       </main>
@@ -450,25 +469,9 @@ function App() {
           onClose={() => setShowServicesModal(false)}
         />
       )}
-      
-      <style jsx>{`
-        .user-badge {
-          font-size: 12px;
-          color: rgba(255, 255, 255, 0.5);
-          display: block;
-          margin-top: -4px;
-        }
-        .btn-danger {
-          background: rgba(239, 68, 68, 0.1);
-          border: 1px solid rgba(239, 68, 68, 0.2);
-          color: #ef4444;
-        }
-        .btn-danger:hover {
-          background: #ef4444;
-          color: white;
-        }
-      `}</style>
-    </div>
+        </div>
+      </div>
+    </Router>
   )
 }
 
