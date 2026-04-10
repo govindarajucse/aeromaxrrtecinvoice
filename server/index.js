@@ -76,12 +76,12 @@ let dbReady = false
 
 async function seedUser() {
   try {
-    const users = userDB.getAll()
+    const users = await userDB.getAll()
     if (users.length === 0) {
       console.log('--- Initial Setup: Seeding Default User ---')
       const salt = await bcrypt.genSalt(10)
       const hashedPassword = await bcrypt.hash('adminpassword', salt)
-      userDB.create({
+      await userDB.create({
         id: 'admin',
         username: 'admin',
         password: hashedPassword,
@@ -228,12 +228,12 @@ app.post('/api/auth/register', async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ error: 'Required fields missing' });
 
-    const existingUser = userDB.findByUsername(username);
+    const existingUser = await userDB.findByUsername(username);
     if (existingUser) return res.status(400).json({ error: 'Username already exists' });
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
-    const user = userDB.create({ id: Date.now().toString(), username, password: hashedPassword, role: 'admin' });
+    const user = await userDB.create({ id: Date.now().toString(), username, password: hashedPassword, role: 'admin' });
     res.status(201).json({ message: 'User registered', username: user.username });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -241,42 +241,42 @@ app.post('/api/auth/register', async (req, res) => {
 });
 
 // Companies API
-app.get('/api/companies', authenticateToken, (req, res) => {
+app.get('/api/companies', authenticateToken, async (req, res) => {
   try {
-    const companies = companyDB.getAll()
+    const companies = await companyDB.getAll()
     res.json(companies)
   } catch (error) {
     res.status(500).json({ error: error.message })
   }
 })
 
-app.post('/api/companies', authenticateToken, (req, res) => {
+app.post('/api/companies', authenticateToken, async (req, res) => {
   try {
     const { name, address } = req.body
     if (!name || !address) return res.status(400).json({ error: 'Name and address are required' })
-    const created = companyDB.create(req.body)
+    const created = await companyDB.create(req.body)
     res.status(201).json(created)
   } catch (error) {
     res.status(500).json({ error: error.message })
   }
 })
 
-app.put('/api/companies/:id', authenticateToken, (req, res) => {
+app.put('/api/companies/:id', authenticateToken, async (req, res) => {
   try {
-    const company = companyDB.getById(req.params.id)
+    const company = await companyDB.getById(req.params.id)
     if (!company) return res.status(404).json({ error: 'Company not found' })
-    const updated = companyDB.update(req.params.id, req.body)
+    const updated = await companyDB.update(req.params.id, req.body)
     res.json(updated)
   } catch (error) {
     res.status(500).json({ error: error.message })
   }
 })
 
-app.delete('/api/companies/:id', authenticateToken, (req, res) => {
+app.delete('/api/companies/:id', authenticateToken, async (req, res) => {
   try {
-    const company = companyDB.getById(req.params.id)
+    const company = await companyDB.getById(req.params.id)
     if (!company) return res.status(404).json({ error: 'Company not found' })
-    companyDB.delete(req.params.id)
+    await companyDB.delete(req.params.id)
     res.json({ message: 'Company deleted', id: req.params.id })
   } catch (error) {
     res.status(500).json({ error: error.message })
@@ -284,36 +284,36 @@ app.delete('/api/companies/:id', authenticateToken, (req, res) => {
 })
 
 // Services API
-app.get('/api/services', authenticateToken, (req, res) => {
+app.get('/api/services', authenticateToken, async (req, res) => {
   try {
-    const services = serviceDB.getAll()
+    const services = await serviceDB.getAll()
     res.json(services)
   } catch (error) {
     res.status(500).json({ error: error.message })
   }
 })
 
-app.post('/api/services', authenticateToken, (req, res) => {
+app.post('/api/services', authenticateToken, async (req, res) => {
   try {
-    const created = serviceDB.create(req.body)
+    const created = await serviceDB.create(req.body)
     res.status(201).json(created)
   } catch (error) {
     res.status(500).json({ error: error.message })
   }
 })
 
-app.put('/api/services/:id', authenticateToken, (req, res) => {
+app.put('/api/services/:id', authenticateToken, async (req, res) => {
   try {
-    const updated = serviceDB.update(req.params.id, req.body)
+    const updated = await serviceDB.update(req.params.id, req.body)
     res.json(updated)
   } catch (error) {
     res.status(500).json({ error: error.message })
   }
 })
 
-app.delete('/api/services/:id', authenticateToken, (req, res) => {
+app.delete('/api/services/:id', authenticateToken, async (req, res) => {
   try {
-    serviceDB.delete(req.params.id)
+    await serviceDB.delete(req.params.id)
     res.status(204).send()
   } catch (error) {
     res.status(500).json({ error: error.message })
@@ -321,18 +321,18 @@ app.delete('/api/services/:id', authenticateToken, (req, res) => {
 })
 
 // Invoices API
-app.get('/api/invoices', authenticateToken, (req, res) => {
+app.get('/api/invoices', authenticateToken, async (req, res) => {
   try {
-    const invoices = invoiceDB.getAll()
+    const invoices = await invoiceDB.getAll()
     res.json(invoices)
   } catch (error) {
     res.status(500).json({ error: error.message })
   }
 })
 
-app.get('/api/invoices/:id', authenticateToken, (req, res) => {
+app.get('/api/invoices/:id', authenticateToken, async (req, res) => {
   try {
-    const invoice = invoiceDB.getById(req.params.id)
+    const invoice = await invoiceDB.getById(req.params.id)
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' })
     res.json(invoice)
   } catch (error) {
@@ -340,7 +340,7 @@ app.get('/api/invoices/:id', authenticateToken, (req, res) => {
   }
 })
 
-app.post('/api/invoices', authenticateToken, (req, res) => {
+app.post('/api/invoices', authenticateToken, async (req, res) => {
   try {
     const { number, clientName, dueDate } = req.body
     if (!number || !clientName || !dueDate) {
@@ -354,43 +354,43 @@ app.post('/api/invoices', authenticateToken, (req, res) => {
       roundOff: parseFloat(req.body.roundOff) || 0
     }
 
-    const created = invoiceDB.create(invoice)
+    const created = await invoiceDB.create(invoice)
     res.status(201).json(created)
   } catch (error) {
     res.status(500).json({ error: error.message })
   }
 })
 
-app.put('/api/invoices/:id', authenticateToken, (req, res) => {
+app.put('/api/invoices/:id', authenticateToken, async (req, res) => {
   try {
-    const invoice = invoiceDB.getById(req.params.id)
+    const invoice = await invoiceDB.getById(req.params.id)
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' })
 
     const updateData = {
       ...req.body,
       roundOff: parseFloat(req.body.roundOff) || 0
     }
-    const updated = invoiceDB.update(req.params.id, updateData)
+    const updated = await invoiceDB.update(req.params.id, updateData)
     res.json(updated)
   } catch (error) {
     res.status(500).json({ error: error.message })
   }
 })
 
-app.patch('/api/invoices/:id/status', authenticateToken, (req, res) => {
+app.patch('/api/invoices/:id/status', authenticateToken, async (req, res) => {
   try {
     const { status } = req.body
     if (!status) return res.status(400).json({ error: 'Status is required' })
-    const updated = invoiceDB.updateStatus(req.params.id, status)
+    const updated = await invoiceDB.updateStatus(req.params.id, status)
     res.json(updated)
   } catch (error) {
     res.status(500).json({ error: error.message })
   }
 })
 
-app.delete('/api/invoices/:id', authenticateToken, (req, res) => {
+app.delete('/api/invoices/:id', authenticateToken, async (req, res) => {
   try {
-    invoiceDB.delete(req.params.id)
+    await invoiceDB.delete(req.params.id)
     res.json({ message: 'Invoice deleted', id: req.params.id })
   } catch (error) {
     res.status(500).json({ error: error.message })
@@ -400,7 +400,7 @@ app.delete('/api/invoices/:id', authenticateToken, (req, res) => {
 // Export API
 app.get('/api/invoices/:id/export/pdf', authenticateToken, async (req, res) => {
   try {
-    const invoice = invoiceDB.getById(req.params.id)
+    const invoice = await invoiceDB.getById(req.params.id)
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' })
     const pdfBuffer = await generatePDF(invoice)
     res.setHeader('Content-Type', 'application/pdf')
@@ -413,7 +413,7 @@ app.get('/api/invoices/:id/export/pdf', authenticateToken, async (req, res) => {
 
 app.get('/api/invoices/:id/export/excel', authenticateToken, async (req, res) => {
   try {
-    const invoice = invoiceDB.getById(req.params.id)
+    const invoice = await invoiceDB.getById(req.params.id)
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' })
     const excelBuffer = await generateExcel(invoice)
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -426,7 +426,7 @@ app.get('/api/invoices/:id/export/excel', authenticateToken, async (req, res) =>
 
 app.get('/api/invoices/export/report', authenticateToken, async (req, res) => {
   try {
-    const invoices = invoiceDB.getAll()
+    const invoices = await invoiceDB.getAll()
     const excelBuffer = await generateReportExcel(invoices)
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     res.setHeader('Content-Disposition', 'attachment; filename="Invoice-Report.xlsx"')

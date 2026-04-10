@@ -1,193 +1,147 @@
-import initSqlJs from 'sql.js'
-import fs from 'fs'
-import path from 'path'
-import { fileURLToPath } from 'url'
+import pg from 'pg'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const dbPath = path.join(__dirname, 'invoices.db')
+const { Pool } = pg
 
-let db = null
+let pool = null
 
-// Initialize database
+// Initialize database - creates all tables
 export async function initializeDatabase() {
-  const SQL = await initSqlJs()
+  const connectionString = process.env.DATABASE_URL
 
-  // Load existing database or create new one
-  if (fs.existsSync(dbPath)) {
-    const data = fs.readFileSync(dbPath)
-    db = new SQL.Database(data)
-  } else {
-    db = new SQL.Database()
+  if (!connectionString) {
+    throw new Error('DATABASE_URL environment variable is not set. Please add it to your environment.')
   }
 
-  // Create invoices table with company fields
-  db.run(`
-    CREATE TABLE IF NOT EXISTS invoices (
-      id TEXT PRIMARY KEY,
-      number TEXT UNIQUE NOT NULL,
-      clientName TEXT NOT NULL,
-      clientAddress TEXT,
-      clientGSTN TEXT,
-      dcNumber TEXT,
-      poNumber TEXT,
-      goodsService TEXT,
-      cgstRate REAL DEFAULT 9,
-      sgstRate REAL DEFAULT 9,
-      igstRate REAL DEFAULT 0,
-      dueDate TEXT NOT NULL,
-      invoiceDate TEXT,
-      status TEXT NOT NULL DEFAULT 'Draft',
-      notes TEXT,
-      createdAt TEXT NOT NULL,
-      updatedAt TEXT NOT NULL,
-      companyName TEXT,
-      companyAddress TEXT,
-      companyGSTN TEXT,
-      companyEmail TEXT,
-      roundOff REAL DEFAULT 0,
-      bankName TEXT,
-      bankBranch TEXT,
-      accountNo TEXT,
-      ifscCode TEXT
-    )
-  `)
-
-  // Ensure missing invoice columns are added when upgrading existing database
-  const existingColumns = db.exec("PRAGMA table_info(invoices)")[0]?.values.map(col => col[1]) || []
-  const requiredColumns = [
-    { name: 'dcNumber', type: 'TEXT' },
-    { name: 'poNumber', type: 'TEXT' },
-    { name: 'goodsService', type: 'TEXT' },
-    { name: 'companyName', type: 'TEXT' },
-    { name: 'companyAddress', type: 'TEXT' },
-    { name: 'companyGSTN', type: 'TEXT' },
-    { name: 'companyEmail', type: 'TEXT' },
-    { name: 'roundOff', type: 'REAL' },
-    { name: 'bankName', type: 'TEXT' },
-    { name: 'bankBranch', type: 'TEXT' },
-    { name: 'accountNo', type: 'TEXT' },
-    { name: 'ifscCode', type: 'TEXT' },
-    { name: 'invoiceDate', type: 'TEXT' }
-  ]
-  requiredColumns.forEach(({ name, type }) => {
-    if (!existingColumns.includes(name)) {
-      db.run(`ALTER TABLE invoices ADD COLUMN ${name} ${type}`)
-    }
+  pool = new Pool({
+    connectionString,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
   })
 
-  // Create line items table
-  db.run(`
-    CREATE TABLE IF NOT EXISTS lineItems (
-      id TEXT PRIMARY KEY,
-      invoiceId TEXT NOT NULL,
-      description TEXT NOT NULL,
-      hsnCode TEXT,
-      qty REAL NOT NULL,
-      rate REAL NOT NULL,
-      amount REAL NOT NULL,
-      FOREIGN KEY (invoiceId) REFERENCES invoices(id) ON DELETE CASCADE
-    )
-  `)
+  // Test connection
+  const client = await pool.connect()
 
-  // Create companies table
-  db.run(`
-    CREATE TABLE IF NOT EXISTS companies (
-      id TEXT PRIMARY KEY,
-      name TEXT UNIQUE NOT NULL,
-      type TEXT DEFAULT 'Client',
-      gstn TEXT,
-      address TEXT,
-      email TEXT,
-      bankName TEXT,
-      bankBranch TEXT,
-      accountNo TEXT,
-      ifscCode TEXT
-    )
-  `)
+  try {
+    console.log('✓ Connected to PostgreSQL')
 
-  // Ensure missing company columns are added
-  const companyColumns = db.exec("PRAGMA table_info(companies)")[0]?.values.map(col => col[1]) || []
-  if (!companyColumns.includes('type')) {
-    db.run(`ALTER TABLE companies ADD COLUMN type TEXT DEFAULT 'Client'`)
+    // Users table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        role TEXT DEFAULT 'admin'
+      )
+    `)
+
+    // Invoices table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS invoices (
+        id TEXT PRIMARY KEY,
+        number TEXT UNIQUE NOT NULL,
+        "clientName" TEXT NOT NULL,
+        "clientAddress" TEXT DEFAULT '',
+        "clientGSTN" TEXT DEFAULT '',
+        "dcNumber" TEXT DEFAULT '',
+        "poNumber" TEXT DEFAULT '',
+        "goodsService" TEXT DEFAULT '',
+        "cgstRate" REAL DEFAULT 9,
+        "sgstRate" REAL DEFAULT 9,
+        "igstRate" REAL DEFAULT 0,
+        "dueDate" TEXT NOT NULL,
+        "invoiceDate" TEXT,
+        status TEXT NOT NULL DEFAULT 'Draft',
+        notes TEXT DEFAULT '',
+        "createdAt" TEXT NOT NULL,
+        "updatedAt" TEXT NOT NULL,
+        "companyName" TEXT DEFAULT '',
+        "companyAddress" TEXT DEFAULT '',
+        "companyGSTN" TEXT DEFAULT '',
+        "companyEmail" TEXT DEFAULT '',
+        "roundOff" REAL DEFAULT 0,
+        "bankName" TEXT DEFAULT '',
+        "bankBranch" TEXT DEFAULT '',
+        "accountNo" TEXT DEFAULT '',
+        "ifscCode" TEXT DEFAULT ''
+      )
+    `)
+
+    // Line items table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS line_items (
+        id TEXT PRIMARY KEY,
+        "invoiceId" TEXT NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+        description TEXT NOT NULL,
+        "hsnCode" TEXT DEFAULT '',
+        qty REAL NOT NULL,
+        rate REAL NOT NULL,
+        amount REAL NOT NULL
+      )
+    `)
+
+    // Companies table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS companies (
+        id TEXT PRIMARY KEY,
+        name TEXT UNIQUE NOT NULL,
+        type TEXT DEFAULT 'Client',
+        gstn TEXT DEFAULT '',
+        address TEXT DEFAULT '',
+        email TEXT DEFAULT '',
+        "bankName" TEXT DEFAULT '',
+        "bankBranch" TEXT DEFAULT '',
+        "accountNo" TEXT DEFAULT '',
+        "ifscCode" TEXT DEFAULT ''
+      )
+    `)
+
+    // Service masters table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS service_masters (
+        id TEXT PRIMARY KEY,
+        name TEXT UNIQUE NOT NULL,
+        "hsnCode" TEXT DEFAULT '',
+        description TEXT DEFAULT ''
+      )
+    `)
+
+    console.log('✓ All PostgreSQL tables ready')
+  } finally {
+    client.release()
   }
 
-  // Create service masters table
-  db.run(`
-    CREATE TABLE IF NOT EXISTS service_masters (
-      id TEXT PRIMARY KEY,
-      name TEXT UNIQUE NOT NULL,
-      hsnCode TEXT,
-      description TEXT
-    )
-  `)
-
-  // Create users table for authentication
-  db.run(`
-    CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
-      username TEXT UNIQUE NOT NULL,
-      password TEXT NOT NULL,
-      role TEXT DEFAULT 'admin'
-    )
-  `)
-
-  saveDatabase()
-  return db
+  return pool
 }
 
-// Save database to file
-function saveDatabase() {
-  const data = db.export()
-  const buffer = Buffer.from(data)
-  fs.writeFileSync(dbPath, buffer)
-}
-
-// User operations
+// --- User Operations ---
 export const userDB = {
-  findByUsername(username) {
+  async findByUsername(username) {
     try {
-      const stmt = db.prepare('SELECT * FROM users WHERE username = ?')
-      stmt.bind([username])
-      if (stmt.step()) {
-        const user = stmt.getAsObject()
-        stmt.free()
-        return user
-      }
-      stmt.free()
-      return null
+      const { rows } = await pool.query('SELECT * FROM users WHERE username = $1', [username])
+      return rows[0] || null
     } catch (error) {
       console.error('Error in findByUsername:', error)
       return null
     }
   },
 
-  getAll() {
+  async getAll() {
     try {
-      const results = []
-      const stmt = db.prepare('SELECT * FROM users')
-      while (stmt.step()) {
-        results.push(stmt.getAsObject())
-      }
-      stmt.free()
-      return results
+      const { rows } = await pool.query('SELECT * FROM users')
+      return rows
     } catch (error) {
       console.error('Error in getAll users:', error)
       return []
     }
   },
 
-  create(user) {
+  async create(user) {
     try {
       const { id, username, password, role } = user
-      const stmt = db.prepare(`
-        INSERT INTO users (id, username, password, role)
-        VALUES (?, ?, ?, ?)
-      `)
-      stmt.bind([id || Date.now().toString(), username, password, role || 'admin'])
-      stmt.step()
-      stmt.free()
-      saveDatabase()
-      return { id, username, role }
+      const { rows } = await pool.query(
+        'INSERT INTO users (id, username, password, role) VALUES ($1, $2, $3, $4) RETURNING *',
+        [id || Date.now().toString(), username, password, role || 'admin']
+      )
+      return rows[0]
     } catch (error) {
       console.error('Error in create user:', error)
       throw error
@@ -195,49 +149,38 @@ export const userDB = {
   }
 }
 
-// Line Items operations
-export const lineItemDB = {
-  getByInvoiceId(invoiceId) {
+// --- Line Item Operations (internal) ---
+const lineItemDB = {
+  async getByInvoiceId(invoiceId) {
     try {
-      const results = []
-      const stmt = db.prepare('SELECT * FROM lineItems WHERE invoiceId = ? ORDER BY rowid ASC')
-      stmt.bind([invoiceId])
-      while (stmt.step()) {
-        results.push(stmt.getAsObject())
-      }
-      stmt.free()
-      return results
+      const { rows } = await pool.query(
+        'SELECT * FROM line_items WHERE "invoiceId" = $1 ORDER BY id ASC',
+        [invoiceId]
+      )
+      return rows
     } catch (error) {
       console.error('Error in getByInvoiceId:', error)
       return []
     }
   },
 
-  create(lineItem) {
+  async create(lineItem) {
     try {
       const { id, invoiceId, description, hsnCode, qty, rate, amount } = lineItem
-      const stmt = db.prepare(`
-        INSERT INTO lineItems (id, invoiceId, description, hsnCode, qty, rate, amount)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `)
-      stmt.bind([id, invoiceId, description, hsnCode, qty, rate, amount])
-      stmt.step()
-      stmt.free()
-      saveDatabase()
+      await pool.query(
+        'INSERT INTO line_items (id, "invoiceId", description, "hsnCode", qty, rate, amount) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+        [id, invoiceId, description, hsnCode || '', qty, rate, amount]
+      )
       return lineItem
     } catch (error) {
-      console.error('Error in create:', error)
+      console.error('Error in create line item:', error)
       throw error
     }
   },
 
-  deleteByInvoiceId(invoiceId) {
+  async deleteByInvoiceId(invoiceId) {
     try {
-      const stmt = db.prepare('DELETE FROM lineItems WHERE invoiceId = ?')
-      stmt.bind([invoiceId])
-      stmt.step()
-      stmt.free()
-      saveDatabase()
+      await pool.query('DELETE FROM line_items WHERE "invoiceId" = $1', [invoiceId])
       return true
     } catch (error) {
       console.error('Error in deleteByInvoiceId:', error)
@@ -246,132 +189,135 @@ export const lineItemDB = {
   }
 }
 
-// Invoice operations
+// --- Invoice Operations ---
 export const invoiceDB = {
-  getAll() {
+  async getAll() {
     try {
-      const results = []
-      const stmt = db.prepare('SELECT * FROM invoices ORDER BY createdAt DESC')
-      while (stmt.step()) {
-        const invoice = stmt.getAsObject()
-        invoice.lineItems = lineItemDB.getByInvoiceId(invoice.id)
-        results.push(invoice)
+      const { rows } = await pool.query('SELECT * FROM invoices ORDER BY "createdAt" DESC')
+      for (const invoice of rows) {
+        invoice.lineItems = await lineItemDB.getByInvoiceId(invoice.id)
       }
-      stmt.free()
-      return results
+      return rows
     } catch (error) {
-      console.error('Error in getAll:', error)
+      console.error('Error in getAll invoices:', error)
       return []
     }
   },
 
-  getById(id) {
+  async getById(id) {
     try {
-      const stmt = db.prepare('SELECT * FROM invoices WHERE id = ?')
-      stmt.bind([id])
-      if (stmt.step()) {
-        const invoice = stmt.getAsObject()
-        stmt.free()
-        invoice.lineItems = lineItemDB.getByInvoiceId(id)
-        return invoice
-      }
-      stmt.free()
-      return null
+      const { rows } = await pool.query('SELECT * FROM invoices WHERE id = $1', [id])
+      if (!rows[0]) return null
+      rows[0].lineItems = await lineItemDB.getByInvoiceId(id)
+      return rows[0]
     } catch (error) {
-      console.error('Error in getById:', error)
+      console.error('Error in getById invoice:', error)
       return null
     }
   },
 
-  create(invoice) {
+  async create(invoice) {
     try {
-      const { id, number, clientName, clientAddress, clientGSTN, dcNumber, poNumber, goodsService, cgstRate, sgstRate, igstRate, dueDate, status, notes, createdAt, lineItems, companyName, companyAddress, companyGSTN, companyEmail, roundOff, bankName, bankBranch, accountNo, ifscCode } = invoice
-      const stmt = db.prepare(`
-        INSERT INTO invoices (id, number, clientName, clientAddress, clientGSTN, dcNumber, poNumber, goodsService, cgstRate, sgstRate, igstRate, dueDate, status, notes, createdAt, updatedAt, companyName, companyAddress, companyGSTN, companyEmail, roundOff, bankName, bankBranch, accountNo, ifscCode)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `)
-      stmt.bind([
-        id, number, clientName, clientAddress || '', clientGSTN || '', dcNumber || '', poNumber || '', goodsService || '',
-        cgstRate || 9, sgstRate || 9, igstRate || 0, dueDate, status, notes, createdAt, createdAt,
-        companyName || '', companyAddress || '', companyGSTN || '', companyEmail || '', typeof roundOff === 'number' ? roundOff : 0,
-        bankName || '', bankBranch || '', accountNo || '', ifscCode || ''
-      ])
-      stmt.step()
-      stmt.free()
+      const {
+        id, number, clientName, clientAddress, clientGSTN, dcNumber, poNumber,
+        goodsService, cgstRate, sgstRate, igstRate, dueDate, invoiceDate, status,
+        notes, createdAt, lineItems, companyName, companyAddress, companyGSTN,
+        companyEmail, roundOff, bankName, bankBranch, accountNo, ifscCode
+      } = invoice
 
-      // Add line items
+      await pool.query(
+        `INSERT INTO invoices (
+          id, number, "clientName", "clientAddress", "clientGSTN", "dcNumber", "poNumber",
+          "goodsService", "cgstRate", "sgstRate", "igstRate", "dueDate", "invoiceDate", status,
+          notes, "createdAt", "updatedAt", "companyName", "companyAddress", "companyGSTN",
+          "companyEmail", "roundOff", "bankName", "bankBranch", "accountNo", "ifscCode"
+        ) VALUES (
+          $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26
+        )`,
+        [
+          id, number, clientName, clientAddress || '', clientGSTN || '', dcNumber || '', poNumber || '',
+          goodsService || '', cgstRate ?? 9, sgstRate ?? 9, igstRate ?? 0, dueDate,
+          invoiceDate || null, status || 'Draft', notes || '', createdAt, createdAt,
+          companyName || '', companyAddress || '', companyGSTN || '', companyEmail || '',
+          typeof roundOff === 'number' ? roundOff : 0,
+          bankName || '', bankBranch || '', accountNo || '', ifscCode || ''
+        ]
+      )
+
       if (lineItems && lineItems.length > 0) {
-        lineItems.forEach(item => {
-          lineItemDB.create({ ...item, invoiceId: id })
-        })
+        for (const item of lineItems) {
+          await lineItemDB.create({ ...item, invoiceId: id })
+        }
       }
 
-      saveDatabase()
-      return this.getById(id)
+      return await this.getById(id)
     } catch (error) {
-      console.error('Error in create:', error)
+      console.error('Error in create invoice:', error)
       throw error
     }
   },
 
-  update(id, invoice) {
+  async update(id, invoice) {
     try {
-      const { number, clientName, clientAddress, clientGSTN, dcNumber, poNumber, goodsService, cgstRate, sgstRate, igstRate, dueDate, status, notes, lineItems, companyName, companyAddress, companyGSTN, companyEmail, roundOff, bankName, bankBranch, accountNo, ifscCode } = invoice
+      const {
+        number, clientName, clientAddress, clientGSTN, dcNumber, poNumber,
+        goodsService, cgstRate, sgstRate, igstRate, dueDate, invoiceDate, status,
+        notes, lineItems, companyName, companyAddress, companyGSTN, companyEmail,
+        roundOff, bankName, bankBranch, accountNo, ifscCode
+      } = invoice
       const updatedAt = new Date().toISOString()
-      const stmt = db.prepare(`
-        UPDATE invoices
-        SET number = ?, clientName = ?, clientAddress = ?, clientGSTN = ?, dcNumber = ?, poNumber = ?, goodsService = ?, cgstRate = ?, sgstRate = ?, igstRate = ?, dueDate = ?, status = ?, notes = ?, updatedAt = ?, companyName = ?, companyAddress = ?, companyGSTN = ?, companyEmail = ?, roundOff = ?, bankName = ?, bankBranch = ?, accountNo = ?, ifscCode = ?
-        WHERE id = ?
-      `)
-      stmt.bind([
-        number, clientName, clientAddress || '', clientGSTN || '', dcNumber || '', poNumber || '', goodsService || '',
-        cgstRate || 9, sgstRate || 9, igstRate || 0, dueDate, status, notes, updatedAt,
-        companyName || '', companyAddress || '', companyGSTN || '', companyEmail || '', typeof roundOff === 'number' ? roundOff : 0,
-        bankName || '', bankBranch || '', accountNo || '', ifscCode || '', id
-      ])
-      stmt.step()
-      stmt.free()
 
-      // Update line items
-      lineItemDB.deleteByInvoiceId(id)
+      await pool.query(
+        `UPDATE invoices SET
+          number=$1, "clientName"=$2, "clientAddress"=$3, "clientGSTN"=$4, "dcNumber"=$5,
+          "poNumber"=$6, "goodsService"=$7, "cgstRate"=$8, "sgstRate"=$9, "igstRate"=$10,
+          "dueDate"=$11, "invoiceDate"=$12, status=$13, notes=$14, "updatedAt"=$15,
+          "companyName"=$16, "companyAddress"=$17, "companyGSTN"=$18, "companyEmail"=$19,
+          "roundOff"=$20, "bankName"=$21, "bankBranch"=$22, "accountNo"=$23, "ifscCode"=$24
+        WHERE id=$25`,
+        [
+          number, clientName, clientAddress || '', clientGSTN || '', dcNumber || '',
+          poNumber || '', goodsService || '', cgstRate ?? 9, sgstRate ?? 9, igstRate ?? 0,
+          dueDate, invoiceDate || null, status, notes || '', updatedAt,
+          companyName || '', companyAddress || '', companyGSTN || '', companyEmail || '',
+          typeof roundOff === 'number' ? roundOff : 0,
+          bankName || '', bankBranch || '', accountNo || '', ifscCode || '', id
+        ]
+      )
+
+      await lineItemDB.deleteByInvoiceId(id)
       if (lineItems && lineItems.length > 0) {
-        lineItems.forEach(item => {
-          lineItemDB.create({ ...item, invoiceId: id })
-        })
+        for (const item of lineItems) {
+          await lineItemDB.create({ ...item, invoiceId: id })
+        }
       }
 
-      saveDatabase()
-      return this.getById(id)
+      return await this.getById(id)
     } catch (error) {
-      console.error('Error in update:', error)
+      console.error('Error in update invoice:', error)
       throw error
     }
   },
 
-  delete(id) {
+  async delete(id) {
     try {
-      lineItemDB.deleteByInvoiceId(id)
-      const stmt = db.prepare('DELETE FROM invoices WHERE id = ?')
-      stmt.bind([id])
-      stmt.step()
-      stmt.free()
-      saveDatabase()
+      await lineItemDB.deleteByInvoiceId(id)
+      await pool.query('DELETE FROM invoices WHERE id = $1', [id])
       return true
     } catch (error) {
-      console.error('Error in delete:', error)
+      console.error('Error in delete invoice:', error)
       throw error
     }
   },
 
-  updateStatus(id, status) {
+  async updateStatus(id, status) {
     try {
       const updatedAt = new Date().toISOString()
-      const stmt = db.prepare('UPDATE invoices SET status = ?, updatedAt = ? WHERE id = ?')
-      stmt.bind([status, updatedAt, id])
-      stmt.step()
-      stmt.free()
-      saveDatabase()
-      return this.getById(id)
+      await pool.query(
+        'UPDATE invoices SET status=$1, "updatedAt"=$2 WHERE id=$3',
+        [status, updatedAt, id]
+      )
+      return await this.getById(id)
     } catch (error) {
       console.error('Error in updateStatus:', error)
       throw error
@@ -379,106 +325,64 @@ export const invoiceDB = {
   }
 }
 
-// Company operations
+// --- Company Operations ---
 export const companyDB = {
-  getAll() {
+  async getAll() {
     try {
-      const results = []
-      const stmt = db.prepare('SELECT * FROM companies ORDER BY name ASC')
-      while (stmt.step()) {
-        results.push(stmt.getAsObject())
-      }
-      stmt.free()
-      return results
+      const { rows } = await pool.query('SELECT * FROM companies ORDER BY name ASC')
+      return rows
     } catch (error) {
       console.error('Error in getAll companies:', error)
       return []
     }
   },
 
-  getById(id) {
+  async getById(id) {
     try {
-      const stmt = db.prepare('SELECT * FROM companies WHERE id = ?')
-      stmt.bind([id])
-      if (stmt.step()) {
-        const company = stmt.getAsObject()
-        stmt.free()
-        return company
-      }
-      stmt.free()
-      return null
+      const { rows } = await pool.query('SELECT * FROM companies WHERE id = $1', [id])
+      return rows[0] || null
     } catch (error) {
       console.error('Error in getById company:', error)
       return null
     }
   },
 
-  create(company) {
+  async create(company) {
     try {
       const { id, name, type, gstn, address, email, bankName, bankBranch, accountNo, ifscCode } = company
-      const stmt = db.prepare(`
-        INSERT INTO companies (id, name, type, gstn, address, email, bankName, bankBranch, accountNo, ifscCode)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `)
-      stmt.bind([
-        id || Date.now().toString(),
-        name,
-        type || 'Client',
-        gstn || '',
-        address || '',
-        email || '',
-        bankName || '',
-        bankBranch || '',
-        accountNo || '',
-        ifscCode || ''
-      ])
-      stmt.step()
-      stmt.free()
-      saveDatabase()
-      return this.getById(id)
+      const newId = id || Date.now().toString()
+      await pool.query(
+        `INSERT INTO companies (id, name, type, gstn, address, email, "bankName", "bankBranch", "accountNo", "ifscCode")
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+        [newId, name, type || 'Client', gstn || '', address || '', email || '',
+         bankName || '', bankBranch || '', accountNo || '', ifscCode || '']
+      )
+      return await this.getById(newId)
     } catch (error) {
       console.error('Error in create company:', error)
       throw error
     }
   },
 
-  update(id, company) {
+  async update(id, company) {
     try {
       const { name, type, gstn, address, email, bankName, bankBranch, accountNo, ifscCode } = company
-      const stmt = db.prepare(`
-        UPDATE companies
-        SET name = ?, type = ?, gstn = ?, address = ?, email = ?, bankName = ?, bankBranch = ?, accountNo = ?, ifscCode = ?
-        WHERE id = ?
-      `)
-      stmt.bind([
-        name,
-        type || 'Client',
-        gstn || '',
-        address || '',
-        email || '',
-        bankName || '',
-        bankBranch || '',
-        accountNo || '',
-        ifscCode || '',
-        id
-      ])
-      stmt.step()
-      stmt.free()
-      saveDatabase()
-      return this.getById(id)
+      await pool.query(
+        `UPDATE companies SET name=$1, type=$2, gstn=$3, address=$4, email=$5,
+         "bankName"=$6, "bankBranch"=$7, "accountNo"=$8, "ifscCode"=$9 WHERE id=$10`,
+        [name, type || 'Client', gstn || '', address || '', email || '',
+         bankName || '', bankBranch || '', accountNo || '', ifscCode || '', id]
+      )
+      return await this.getById(id)
     } catch (error) {
       console.error('Error in update company:', error)
       throw error
     }
   },
 
-  delete(id) {
+  async delete(id) {
     try {
-      const stmt = db.prepare('DELETE FROM companies WHERE id = ?')
-      stmt.bind([id])
-      stmt.step()
-      stmt.free()
-      saveDatabase()
+      await pool.query('DELETE FROM companies WHERE id = $1', [id])
       return true
     } catch (error) {
       console.error('Error in delete company:', error)
@@ -487,94 +391,60 @@ export const companyDB = {
   }
 }
 
-// Service Master operations
+// --- Service Master Operations ---
 export const serviceDB = {
-  getAll() {
+  async getAll() {
     try {
-      const results = []
-      const stmt = db.prepare('SELECT * FROM service_masters ORDER BY name ASC')
-      while (stmt.step()) {
-        results.push(stmt.getAsObject())
-      }
-      stmt.free()
-      return results
+      const { rows } = await pool.query('SELECT * FROM service_masters ORDER BY name ASC')
+      return rows
     } catch (error) {
       console.error('Error in getAll services:', error)
       return []
     }
   },
 
-  getById(id) {
+  async getById(id) {
     try {
-      const stmt = db.prepare('SELECT * FROM service_masters WHERE id = ?')
-      stmt.bind([id])
-      if (stmt.step()) {
-        const service = stmt.getAsObject()
-        stmt.free()
-        return service
-      }
-      stmt.free()
-      return null
+      const { rows } = await pool.query('SELECT * FROM service_masters WHERE id = $1', [id])
+      return rows[0] || null
     } catch (error) {
       console.error('Error in getById service:', error)
       return null
     }
   },
 
-  create(service) {
+  async create(service) {
     try {
       const { id, name, hsnCode, description } = service
-      const stmt = db.prepare(`
-        INSERT INTO service_masters (id, name, hsnCode, description)
-        VALUES (?, ?, ?, ?)
-      `)
-      stmt.bind([
-        id || Date.now().toString(),
-        name,
-        hsnCode || '',
-        description || ''
-      ])
-      stmt.step()
-      stmt.free()
-      saveDatabase()
-      return this.getById(id)
+      const newId = id || Date.now().toString()
+      await pool.query(
+        'INSERT INTO service_masters (id, name, "hsnCode", description) VALUES ($1,$2,$3,$4)',
+        [newId, name, hsnCode || '', description || '']
+      )
+      return await this.getById(newId)
     } catch (error) {
       console.error('Error in create service:', error)
       throw error
     }
   },
 
-  update(id, service) {
+  async update(id, service) {
     try {
       const { name, hsnCode, description } = service
-      const stmt = db.prepare(`
-        UPDATE service_masters
-        SET name = ?, hsnCode = ?, description = ?
-        WHERE id = ?
-      `)
-      stmt.bind([
-        name,
-        hsnCode || '',
-        description || '',
-        id
-      ])
-      stmt.step()
-      stmt.free()
-      saveDatabase()
-      return this.getById(id)
+      await pool.query(
+        'UPDATE service_masters SET name=$1, "hsnCode"=$2, description=$3 WHERE id=$4',
+        [name, hsnCode || '', description || '', id]
+      )
+      return await this.getById(id)
     } catch (error) {
       console.error('Error in update service:', error)
       throw error
     }
   },
 
-  delete(id) {
+  async delete(id) {
     try {
-      const stmt = db.prepare('DELETE FROM service_masters WHERE id = ?')
-      stmt.bind([id])
-      stmt.step()
-      stmt.free()
-      saveDatabase()
+      await pool.query('DELETE FROM service_masters WHERE id = $1', [id])
       return true
     } catch (error) {
       console.error('Error in delete service:', error)
@@ -582,5 +452,3 @@ export const serviceDB = {
     }
   }
 }
-
-export default db
