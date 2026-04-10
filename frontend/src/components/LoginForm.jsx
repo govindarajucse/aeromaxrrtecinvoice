@@ -29,8 +29,17 @@ function LoginForm({ onLogin }) {
         // Handle non-JSON response (e.g., server crash or HTML error page)
         const text = await response.text()
         console.error('Server returned non-JSON response:', text)
-        const preview = text.substring(0, 50).trim()
-        throw new Error(`Server error (${response.status}): The server returned a webpage instead of data. (Preview: "${preview}...")`)
+        
+        // Try to find a more descriptive error in HTML if it's an Express error page
+        let detail = ''
+        if (text.includes('<pre>')) {
+          detail = text.split('<pre>')[1]?.split('</pre>')[0] || ''
+        } else if (text.includes('<title>')) {
+          detail = text.split('<title>')[1]?.split('</title>')[0] || ''
+        }
+        
+        const preview = (detail || text).substring(0, 100).trim()
+        throw new Error(`Server configuration error (${response.status}): The server returned a webpage instead of data. Check if your API server is running correctly. (Detail: "${preview}...")`)
       }
     } catch (err) {
       setError(err.message)

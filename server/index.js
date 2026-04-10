@@ -65,10 +65,6 @@ function getStaticPath() {
 }
 
 const staticPath = getStaticPath();
-
-console.log(`✓ Static files path: ${staticPath}`)
-console.log(`✓ index.html exists: ${existsSync(join(staticPath, 'index.html'))}`)
-
 const app = express()
 const PORT = process.env.PORT || 9999
 
@@ -120,7 +116,7 @@ async function startServer() {
 // Configure multer for logo uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, join(__dirname, 'public', 'logos'))
+    cb(null, logosDir)
   },
   filename: (req, file, cb) => {
     cb(null, 'company-logo' + getFileExtension(file.originalname))
@@ -148,13 +144,10 @@ app.use(cors())
 app.use(express.json())
 app.use(express.static(join(__dirname, 'public')))
 
-// --- HYPER-VERBOSE LOGGING FOR RENDER DEBUGGING ---
+// Request Logging
 app.use((req, res, next) => {
   const timestamp = new Date().toISOString();
   console.log(`[${timestamp}] ${req.method} ${req.path}`);
-  if (req.path.startsWith('/api')) {
-    console.log(`   > API Call detected. Payload keys: ${Object.keys(req.body || {}).join(', ') || 'none'}`);
-  }
   next();
 });
 
@@ -167,22 +160,15 @@ app.use((req, res, next) => {
   next();
 });
 
-// --- API ROUTES START HERE ---
+// --- API ROUTES ---
 
-// GLOBAL API IDENTIFIER (Used to see if request reached Express)
-app.use('/api', (req, res, next) => {
-  res.setHeader('X-API-Server', 'invoice-api-v1');
-  next();
-});
-
-// Simple Truth Test (Visit this in your browser to check if the server is alive)
+// Simple Health Test
 app.get('/api/test-server', (req, res) => {
-  res.send('✓ Server is alive and responding to API calls! Date: ' + new Date().toISOString());
+  res.json({ status: 'success', message: 'Server is alive', date: new Date().toISOString() });
 });
 
-// --- AUTH API (MOVED TO TOP FOR PRIORITY) ---
+// Auth API
 app.post('/api/auth/login', async (req, res) => {
-  res.setHeader('X-API-Source', 'Express-Server');
   try {
     const { username, password } = req.body;
     console.log(`[AUTH] Login attempt for: ${username}`);
@@ -214,6 +200,10 @@ app.post('/api/auth/register', async (req, res) => {
   try {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ error: 'Required fields missing' });
+    
+    const existingUser = userDB.findByUsername(username);
+    if (existingUser) return res.status(400).json({ error: 'Username already exists' });
+
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
     const user = userDB.create({ id: Date.now().toString(), username, password: hashedPassword, role: 'admin' });
@@ -223,131 +213,7 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-// Seed database with initial data
-function seedDatabase() {
-  const existingCompanies = companyDB.getAll()
-  if (existingCompanies.length === 0) {
-    companyDB.create({
-      id: 'company-1',
-      name: 'AEROMAXRR TEC',
-      gstn: '29CKVPR3997N1ZJ',
-      address: '#39, Ground Floor, Ramaiah Layout, 2nd Cross, Rajagopalanagar Main Road, Landmark: Sri Maruthi Theatre, Peeny 2nd Stage, Bengaluru, Karnataka, Pincode - 560058.',
-      email: 'aeromaxrrtec@gmail.com',
-      bankName: 'HDFC BANK',
-      bankBranch: 'T DASARAHALLI',
-      accountNo: '50200067666292',
-      ifscCode: 'HDFC0001040'
-    })
-    companyDB.create({
-      id: 'company-2',
-      name: 'Aerostar Technologies',
-      gstn: '29ACBFA5366Q1ZR',
-      address: 'Peenya Industrial Area, Bengaluru, Karnataka',
-      email: 'info@aerostar.com',
-      bankName: '',
-      bankBranch: '',
-      accountNo: '',
-      ifscCode: ''
-    })
-    console.log('✓ Database seeded with sample companies')
-  }
-
-  const existingInvoices = invoiceDB.getAll()
-  if (existingInvoices.length === 0) {
-    const sampleInvoice = {
-      id: '1707001200000',
-      number: '25-26/AM/INV-006',
-      clientName: 'Aerostar Technologies',
-      clientAddress: '#1,4th Cross, Doddanna Indl., Peenya 2nd Stage, BENGALURU, PinCode - 560091',
-      clientGSTN: '29ACBFA5366Q1ZR',
-      dcNumber: '25-26/AM/DC-007',
-      poNumber: '21',
-      goodsService: 'Service',
-      cgstRate: 9,
-      sgstRate: 9,
-      igstRate: 0,
-      dueDate: '2026-03-04',
-      status: 'Sent',
-      notes: 'Tax Invoice - AEROMAXRR TEC Manufacturing Services',
-      createdAt: '2026-02-02T10:00:00.000Z',
-      lineItems: [
-        { id: '1', description: '90*X50*X40 R10 D2 DIE', hsnCode: '9988', qty: 10, rate: 1710.00, amount: 17100.00 },
-        { id: '2', description: 'AXR-073-SIZE MILLING', hsnCode: '9988', qty: 130, rate: 25.00, amount: 3250.00 },
-        { id: '3', description: '104-5000324/235 TOP & BOTTOM-300 SET OP-10,PO30', hsnCode: '9988', qty: 300, rate: 282.00, amount: 84600.00 },
-        { id: '4', description: 'AWTI-GYD-5-1-011', hsnCode: '9988', qty: 4, rate: 1700.00, amount: 6800.00 },
-        { id: '5', description: '4501510604 FC GB FLAT', hsnCode: '9988', qty: 2, rate: 2670.00, amount: 5340.00 },
-        { id: '6', description: 'AWTI-OLW-8-0-023', hsnCode: '9988', qty: 8, rate: 800.00, amount: 6400.00 },
-        { id: '7', description: 'AWTI-BPH-8-015', hsnCode: '9988', qty: 1, rate: 1612.00, amount: 1612.00 },
-        { id: '8', description: 'AWTI-OLW-8-0-022', hsnCode: '9988', qty: 1, rate: 2070.00, amount: 2070.00 },
-        { id: '9', description: 'AWTI-OLW-8-0-021', hsnCode: '9988', qty: 1, rate: 2480.00, amount: 2480.00 },
-        { id: '10', description: 'KEY -956A3204P05', hsnCode: '9988', qty: 8, rate: 3170.00, amount: 25360.00 }
-      ]
-    }
-
-    invoiceDB.create(sampleInvoice)
-    console.log('✓ Database seeded with sample invoice')
-  }
-}
-
-// Routes
-
-// --- AUTH API ---
-
-app.post('/api/auth/register', async (req, res) => {
-  try {
-    const { username, password } = req.body
-    if (!username || !password) {
-      return res.status(400).json({ error: 'Username and password are required' })
-    }
-
-    const existingUser = userDB.findByUsername(username)
-    if (existingUser) {
-      return res.status(400).json({ error: 'Username already exists' })
-    }
-
-    const salt = await bcrypt.genSalt(10)
-    const hashedPassword = await bcrypt.hash(password, salt)
-
-    const user = userDB.create({
-      id: Date.now().toString(),
-      username,
-      password: hashedPassword,
-      role: 'admin'
-    })
-
-    res.status(201).json({ message: 'User registered successfully', username: user.username })
-  } catch (error) {
-    res.status(500).json({ error: error.message })
-  }
-})
-
-app.post('/api/auth/login', async (req, res) => {
-  res.setHeader('X-API-Source', 'Express-Server')
-  try {
-    const { username, password } = req.body
-    const user = userDB.findByUsername(username)
-
-    if (!user) {
-      return res.status(401).json({ error: 'Invalid credentials' })
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password)
-    if (!isMatch) {
-      return res.status(401).json({ error: 'Invalid credentials' })
-    }
-
-    const payload = { id: user.id, username: user.username, role: user.role }
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '12h' })
-
-    res.json({ token, user: { username: user.username, role: user.role } })
-  } catch (error) {
-    res.status(500).json({ error: error.message })
-  }
-})
-
-
-// --- COMPANIES API ---
-
+// Companies API
 app.get('/api/companies', authenticateToken, (req, res) => {
   try {
     const companies = companyDB.getAll()
@@ -360,9 +226,7 @@ app.get('/api/companies', authenticateToken, (req, res) => {
 app.post('/api/companies', authenticateToken, (req, res) => {
   try {
     const { name, address } = req.body
-    if (!name || !address) {
-      return res.status(400).json({ error: 'Name and address are required' })
-    }
+    if (!name || !address) return res.status(400).json({ error: 'Name and address are required' })
     const created = companyDB.create(req.body)
     res.status(201).json(created)
   } catch (error) {
@@ -373,9 +237,7 @@ app.post('/api/companies', authenticateToken, (req, res) => {
 app.put('/api/companies/:id', authenticateToken, (req, res) => {
   try {
     const company = companyDB.getById(req.params.id)
-    if (!company) {
-      return res.status(404).json({ error: 'Company not found' })
-    }
+    if (!company) return res.status(404).json({ error: 'Company not found' })
     const updated = companyDB.update(req.params.id, req.body)
     res.json(updated)
   } catch (error) {
@@ -386,9 +248,7 @@ app.put('/api/companies/:id', authenticateToken, (req, res) => {
 app.delete('/api/companies/:id', authenticateToken, (req, res) => {
   try {
     const company = companyDB.getById(req.params.id)
-    if (!company) {
-      return res.status(404).json({ error: 'Company not found' })
-    }
+    if (!company) return res.status(404).json({ error: 'Company not found' })
     companyDB.delete(req.params.id)
     res.json({ message: 'Company deleted', id: req.params.id })
   } catch (error) {
@@ -396,9 +256,7 @@ app.delete('/api/companies/:id', authenticateToken, (req, res) => {
   }
 })
 
-
-// --- SERVICE MASTER API ---
-
+// Services API
 app.get('/api/services', authenticateToken, (req, res) => {
   try {
     const services = serviceDB.getAll()
@@ -435,10 +293,7 @@ app.delete('/api/services/:id', authenticateToken, (req, res) => {
   }
 })
 
-
-// --- INVOICES API ---
-
-// GET all invoices
+// Invoices API
 app.get('/api/invoices', authenticateToken, (req, res) => {
   try {
     const invoices = invoiceDB.getAll()
@@ -448,50 +303,28 @@ app.get('/api/invoices', authenticateToken, (req, res) => {
   }
 })
 
-// GET single invoice
 app.get('/api/invoices/:id', authenticateToken, (req, res) => {
   try {
     const invoice = invoiceDB.getById(req.params.id)
-    if (!invoice) {
-      return res.status(404).json({ error: 'Invoice not found' })
-    }
+    if (!invoice) return res.status(404).json({ error: 'Invoice not found' })
     res.json(invoice)
   } catch (error) {
     res.status(500).json({ error: error.message })
   }
 })
 
-// CREATE invoice
 app.post('/api/invoices', authenticateToken, (req, res) => {
   try {
-    const { number, clientName, clientAddress, clientGSTN, dcNumber, poNumber, goodsService, cgstRate, sgstRate, igstRate, dueDate, status = 'Draft', notes = '', lineItems = [], roundOff = 0, companyName = '', companyAddress = '', companyGSTN = '', companyEmail = '' } = req.body
-
+    const { number, clientName, dueDate } = req.body
     if (!number || !clientName || !dueDate) {
       return res.status(400).json({ error: 'Missing required fields' })
     }
 
     const invoice = {
+      ...req.body,
       id: Date.now().toString(),
-      number,
-      clientName,
-      clientAddress: clientAddress || '',
-      clientGSTN: clientGSTN || '',
-      dcNumber: dcNumber || '',
-      poNumber: poNumber || '',
-      goodsService: goodsService || 'Service',
-      cgstRate: cgstRate || 9,
-      sgstRate: sgstRate || 9,
-      igstRate: igstRate || 0,
-      dueDate,
-      status,
-      notes,
       createdAt: new Date().toISOString(),
-      lineItems,
-      roundOff: typeof roundOff === 'number' ? roundOff : parseFloat(roundOff) || 0,
-      companyName: companyName || '',
-      companyAddress: companyAddress || '',
-      companyGSTN: companyGSTN || '',
-      companyEmail: companyEmail || ''
+      roundOff: parseFloat(req.body.roundOff) || 0
     }
 
     const created = invoiceDB.create(invoice)
@@ -501,24 +334,15 @@ app.post('/api/invoices', authenticateToken, (req, res) => {
   }
 })
 
-// UPDATE invoice
 app.put('/api/invoices/:id', authenticateToken, (req, res) => {
   try {
     const invoice = invoiceDB.getById(req.params.id)
-    if (!invoice) {
-      return res.status(404).json({ error: 'Invoice not found' })
-    }
+    if (!invoice) return res.status(404).json({ error: 'Invoice not found' })
 
-    // Ensure roundOff is a number if present
-    const updateData = { ...req.body }
-    if (updateData.roundOff !== undefined) {
-      updateData.roundOff = typeof updateData.roundOff === 'number' ? updateData.roundOff : parseFloat(updateData.roundOff) || 0
+    const updateData = {
+      ...req.body,
+      roundOff: parseFloat(req.body.roundOff) || 0
     }
-    // Ensure company fields are present
-    updateData.companyName = updateData.companyName || ''
-    updateData.companyAddress = updateData.companyAddress || ''
-    updateData.companyGSTN = updateData.companyGSTN || ''
-    updateData.companyEmail = updateData.companyEmail || ''
     const updated = invoiceDB.update(req.params.id, updateData)
     res.json(updated)
   } catch (error) {
@@ -526,19 +350,10 @@ app.put('/api/invoices/:id', authenticateToken, (req, res) => {
   }
 })
 
-// UPDATE invoice status
 app.patch('/api/invoices/:id/status', authenticateToken, (req, res) => {
   try {
     const { status } = req.body
-    if (!status) {
-      return res.status(400).json({ error: 'Status is required' })
-    }
-
-    const invoice = invoiceDB.getById(req.params.id)
-    if (!invoice) {
-      return res.status(404).json({ error: 'Invoice not found' })
-    }
-
+    if (!status) return res.status(400).json({ error: 'Status is required' })
     const updated = invoiceDB.updateStatus(req.params.id, status)
     res.json(updated)
   } catch (error) {
@@ -546,14 +361,8 @@ app.patch('/api/invoices/:id/status', authenticateToken, (req, res) => {
   }
 })
 
-// DELETE invoice
 app.delete('/api/invoices/:id', authenticateToken, (req, res) => {
   try {
-    const invoice = invoiceDB.getById(req.params.id)
-    if (!invoice) {
-      return res.status(404).json({ error: 'Invoice not found' })
-    }
-
     invoiceDB.delete(req.params.id)
     res.json({ message: 'Invoice deleted', id: req.params.id })
   } catch (error) {
@@ -561,14 +370,11 @@ app.delete('/api/invoices/:id', authenticateToken, (req, res) => {
   }
 })
 
-// EXPORT invoice as PDF
+// Export API
 app.get('/api/invoices/:id/export/pdf', authenticateToken, async (req, res) => {
   try {
     const invoice = invoiceDB.getById(req.params.id)
-    if (!invoice) {
-      return res.status(404).json({ error: 'Invoice not found' })
-    }
-
+    if (!invoice) return res.status(404).json({ error: 'Invoice not found' })
     const pdfBuffer = await generatePDF(invoice)
     res.setHeader('Content-Type', 'application/pdf')
     res.setHeader('Content-Disposition', `attachment; filename="Invoice-${invoice.number}.pdf"`)
@@ -578,14 +384,10 @@ app.get('/api/invoices/:id/export/pdf', authenticateToken, async (req, res) => {
   }
 })
 
-// EXPORT invoice as Excel
 app.get('/api/invoices/:id/export/excel', authenticateToken, async (req, res) => {
   try {
     const invoice = invoiceDB.getById(req.params.id)
-    if (!invoice) {
-      return res.status(404).json({ error: 'Invoice not found' })
-    }
-
+    if (!invoice) return res.status(404).json({ error: 'Invoice not found' })
     const excelBuffer = await generateExcel(invoice)
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     res.setHeader('Content-Disposition', `attachment; filename="Invoice-${invoice.number}.xlsx"`)
@@ -595,12 +397,10 @@ app.get('/api/invoices/:id/export/excel', authenticateToken, async (req, res) =>
   }
 })
 
-// EXPORT all invoices as Excel Report
 app.get('/api/invoices/export/report', authenticateToken, async (req, res) => {
   try {
     const invoices = invoiceDB.getAll()
     const excelBuffer = await generateReportExcel(invoices)
-
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     res.setHeader('Content-Disposition', 'attachment; filename="Invoice-Report.xlsx"')
     res.send(excelBuffer)
@@ -609,59 +409,32 @@ app.get('/api/invoices/export/report', authenticateToken, async (req, res) => {
   }
 })
 
+// Logo API
+app.post('/api/logo/upload', authenticateToken, (req, res) => {
+  upload.single('logo')(req, res, (err) => {
+    if (err) return res.status(400).json({ error: `Upload error: ${err.message}` })
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
+    res.json({ message: 'Logo uploaded successfully', logoUrl: `/logos/${req.file.filename}` })
+  })
+})
+
+app.get('/api/logo', authenticateToken, (req, res) => {
+  try {
+    const logoFiles = readdirSync(logosDir)
+    const logoFile = logoFiles.find(f => f.startsWith('company-logo'))
+    if (!logoFile) return res.status(404).json({ error: 'No logo found' })
+    res.json({ logoUrl: `/logos/${logoFile}` })
+  } catch (error) {
+    res.status(404).json({ error: 'No logo found' })
+  }
+})
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'Invoice API is running' })
 })
 
-// UPLOAD logo
-app.post('/api/logo/upload', authenticateToken, (req, res) => {
-  upload.single('logo')(req, res, (err) => {
-    if (err instanceof multer.MulterError) {
-      console.error('Multer Error:', err)
-      return res.status(400).json({ error: `Upload error: ${err.message}` })
-    } else if (err) {
-      console.error('Unknown Upload Error:', err)
-      return res.status(500).json({ error: `Server error: ${err.message}` })
-    }
-
-    try {
-      if (!req.file) {
-        return res.status(400).json({ error: 'No file uploaded' })
-      }
-      console.log('✓ Logo uploaded successfully:', req.file.filename)
-      res.json({
-        message: 'Logo uploaded successfully',
-        logoUrl: `/logos/company-logo${getFileExtension(req.file.originalname)}`
-      })
-    } catch (error) {
-      console.error('Logo process error:', error)
-      res.status(500).json({ error: error.message })
-    }
-  })
-})
-
-// GET logo
-app.get('/api/logo', authenticateToken, (req, res) => {
-  try {
-    const logoFiles = readdirSync(logosDir)
-    const logoFile = logoFiles.find(f => f.startsWith('company-logo'))
-
-    if (!logoFile) {
-      return res.status(404).json({ error: 'No logo found' })
-    }
-
-    res.json({ logoUrl: `/logos/${logoFile}` })
-  } catch (error) {
-    if (error.code === 'ENOENT') {
-      res.status(404).json({ error: 'No logo found' })
-    } else {
-      res.status(500).json({ error: error.message })
-    }
-  }
-})
-
-// API 404 Handler (Avoid serving HTML for missing API routes)
+// Global API 404 Handler (Avoid serving HTML for missing API routes)
 app.all('/api/*', (req, res) => {
   res.status(404).json({
     error: 'API route not found',
@@ -670,16 +443,23 @@ app.all('/api/*', (req, res) => {
   })
 })
 
-// Serve static files from the React frontend
+// Error-handling middleware for API (Always returns JSON)
+app.use('/api', (err, req, res, next) => {
+  console.error('API Error:', err);
+  res.status(err.status || 500).json({
+    error: err.message || 'Internal Server Error',
+    type: 'API_ERROR'
+  });
+});
+
+// Serve frontend static files
 app.use(express.static(staticPath))
 
-// Catch-all route to serve the React index.html
+// Catch-all route for SPA (Avoid intercepting /api)
 app.get('*', (req, res) => {
-  // Check if the request is not for an API route
   if (!req.path.startsWith('/api')) {
     res.sendFile(join(staticPath, 'index.html'))
   }
 })
 
-// Start the server
 startServer()
