@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import CompanyForm from './CompanyForm'
-import { formatINR } from '../App'
+import { formatINR, validateGSTIN, generateInvoiceNumber, generateDCNumber } from '../App'
 
 function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
   // Helper to always provide a string value for inputs
@@ -9,12 +9,16 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
   const [services, setServices] = useState([])
   const [showCompanyForm, setShowCompanyForm] = useState(false)
   const [selectedCompany, setSelectedCompany] = useState('')
+  const [clientGstnError, setClientGstnError] = useState('')
+  const [companyGstnError, setCompanyGstnError] = useState('')
+  const [allInvoices, setAllInvoices] = useState([])
   const [formData, setFormData] = useState({
     number: '',
     invoiceDate: new Date().toISOString().split('T')[0],
     clientName: '',
     clientAddress: '',
     clientGSTN: '',
+    clientState: '',
     dcNumber: '',
     poNumber: '',
     goodsService: 'Service',
@@ -29,6 +33,7 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
     companyName: '',
     companyAddress: '',
     companyGSTN: '',
+    companyState: '',
     companyEmail: '',
     bankName: '',
     bankBranch: '',
@@ -40,7 +45,8 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
     description: '',
     hsnCode: '',
     qty: '',
-    rate: ''
+    rate: '',
+    taxRate: 18
   })
 
   const fetchCompanies = async () => {
@@ -54,6 +60,20 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
       }
     } catch (err) {
       console.error('Error fetching companies:', err)
+    }
+  }
+
+  const fetchInvoices = async () => {
+    try {
+      const res = await fetch('/api/invoices', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setAllInvoices(data)
+      }
+    } catch (err) {
+      console.error('Error fetching invoices:', err)
     }
   }
 
@@ -74,7 +94,8 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
   useEffect(() => {
     fetchCompanies()
     fetchServices()
-  }, [])
+    fetchInvoices()
+  }, [token])
 
   useEffect(() => {
     if (invoice && companies.length > 0) {
@@ -83,16 +104,65 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
       setSelectedCompany(matchedCompany ? matchedCompany.name : '')
       setFormData({
         ...invoice,
-        lineItems: invoice.lineItems || []
+        lineItems: invoice.lineItems || [],
+        clientState: invoice.clientState || '',
+        companyState: invoice.companyState || ''
       })
     } else if (invoice) {
       setFormData({
         ...invoice,
-        lineItems: invoice.lineItems || []
+        lineItems: invoice.lineItems || [],
+        clientState: invoice.clientState || '',
+        companyState: invoice.companyState || ''
       });
       setSelectedCompany(invoice.companyName || '');
+    } else {
+      // Auto-generate invoice number and DC number for new invoice
+      // Find the last invoice with matching financial year pattern
+      const invoiceDate = new Date().toISOString().split('T')[0]
+      const date = new Date(invoiceDate)
+      const year = date.getFullYear()
+      const month = date.getMonth()
+      const fyStart = month >= 3 ? year : year - 1
+      const fyEnd = month >= 3 ? year + 1 : year
+      const fyCode = `${fyStart.toString().slice(-2)}-${fyEnd.toString().slice(-2)}`
+      
+      // Filter invoices by current financial year and find max sequence
+      const fyInvoices = allInvoices.filter(inv => inv.number && inv.number.includes(`INV/${fyCode}/`))
+      const lastInvoice = fyInvoices.length > 0 
+        ? fyInvoices.reduce((max, inv) => {
+            const match = inv.number.match(/INV\/\d{2}-\d{2}\/(\d+)/)
+            const seq = match ? parseInt(match[1]) : 0
+            const maxMatch = max.number.match(/INV\/\d{2}-\d{2}\/(\d+)/)
+            const maxSeq = maxMatch ? parseInt(maxMatch[1]) : 0
+            return seq > maxSeq ? inv : max
+          }, fyInvoices[0])
+        : null
+      
+      // Same logic for DC numbers
+      const fyDCs = allInvoices.filter(inv => inv.dcNumber && inv.dcNumber.includes(`DC/${fyCode}/`))
+      const lastDC = fyDCs.length > 0
+        ? fyDCs.reduce((max, inv) => {
+            const match = inv.dcNumber.match(/DC\/\d{2}-\d{2}\/(\d+)/)
+            const seq = match ? parseInt(match[1]) : 0
+            const maxMatch = max.dcNumber.match(/DC\/\d{2}-\d{2}\/(\d+)/)
+            const maxSeq = maxMatch ? parseInt(maxMatch[1]) : 0
+            return seq > maxSeq ? inv : max
+          }, fyDCs[0])
+        : null
+      
+      const autoNumber = generateInvoiceNumber(lastInvoice?.number || null, invoiceDate)
+      const autoDC = generateDCNumber(lastDC?.dcNumber || null, invoiceDate)
+      const dueDate = new Date(invoiceDate)
+      dueDate.setDate(dueDate.getDate() + 60)
+      setFormData(prev => ({
+        ...prev,
+        number: autoNumber,
+        dcNumber: autoDC,
+        dueDate: dueDate.toISOString().split('T')[0]
+      }))
     }
-  }, [invoice, companies])
+  }, [invoice, companies, allInvoices])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -100,6 +170,34 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
       ...prev,
       [name]: value
     }))
+    
+    if (name === 'clientGSTN') {
+      if (value && !validateGSTIN(value)) {
+        setClientGstnError('Invalid GSTIN format. Must be 15 characters (e.g., 22AAAAA0000A1Z5)')
+      } else {
+        setClientGstnError('')
+      }
+    }
+    
+    if (name === 'companyGSTN') {
+      if (value && !validateGSTIN(value)) {
+        setCompanyGstnError('Invalid GSTIN format. Must be 15 characters (e.g., 22AAAAA0000A1Z5)')
+      } else {
+        setCompanyGstnError('')
+      }
+    }
+    
+    // Auto-calculate due date (60 days from invoice date)
+    if (name === 'invoiceDate') {
+      const invoiceDate = new Date(value)
+      const dueDate = new Date(invoiceDate)
+      dueDate.setDate(dueDate.getDate() + 60)
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+        dueDate: dueDate.toISOString().split('T')[0]
+      }))
+    }
   }
 
   const handleCompanySelect = (e) => {
@@ -112,6 +210,7 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
         companyName: company.name,
         companyGSTN: company.gstn,
         companyAddress: company.address,
+        companyState: company.state || '',
         companyEmail: company.email || '',
         bankName: company.bankName || '',
         bankBranch: company.bankBranch || '',
@@ -124,6 +223,7 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
         companyName: '',
         companyGSTN: '',
         companyAddress: '',
+        companyState: '',
         companyEmail: '',
         bankName: '',
         bankBranch: '',
@@ -159,6 +259,7 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
         companyName: company.name,
         companyGSTN: company.gstn,
         companyAddress: company.address,
+        companyState: company.state || '',
         companyEmail: company.email || '',
         bankName: company.bankName || '',
         bankBranch: company.bankBranch || '',
@@ -215,6 +316,22 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
     }))
   }
 
+  const updateLineItem = (id, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      lineItems: prev.lineItems.map(item => {
+        if (item.id === id) {
+          const updatedItem = { ...item, [field]: value }
+          if (field === 'qty' || field === 'rate') {
+            updatedItem.amount = updatedItem.qty * updatedItem.rate
+          }
+          return updatedItem
+        }
+        return item
+      })
+    }))
+  }
+
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!formData.number || !formData.invoiceDate || !formData.clientName || !formData.dueDate || !formData.companyName || !formData.companyAddress) {
@@ -255,7 +372,7 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
         >
           ×
         </button>
-        <h2 style={{ display: 'flex', alignItems: 'center', gap: '1rem', justifyContent: 'space-between' }}>
+        <h2 style={{ display: 'flex', alignItems: 'center', gap: '1rem', justifyContent: 'space-between', paddingRight: '40px' }}>
           <span>{invoice ? 'Edit Invoice' : 'New Invoice'}</span>
           <button 
             type="button" 
@@ -339,7 +456,53 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
                   onChange={handleChange}
                   placeholder="Your GSTN"
                   readOnly={!!selectedCompany && selectedCompany !== '__new'}
+                  style={{ borderColor: companyGstnError ? '#ef4444' : '' }}
                 />
+                {companyGstnError && <p style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem' }}>{companyGstnError}</p>}
+              </div>
+              <div className="form-group">
+                <label htmlFor="companyState">State *</label>
+                <select
+                  id="companyState"
+                  name="companyState"
+                  value={safe(formData.companyState)}
+                  onChange={handleChange}
+                  required
+                >
+                  <option value="">Select State</option>
+                  <option value="Andhra Pradesh">Andhra Pradesh</option>
+                  <option value="Arunachal Pradesh">Arunachal Pradesh</option>
+                  <option value="Assam">Assam</option>
+                  <option value="Bihar">Bihar</option>
+                  <option value="Chhattisgarh">Chhattisgarh</option>
+                  <option value="Goa">Goa</option>
+                  <option value="Gujarat">Gujarat</option>
+                  <option value="Haryana">Haryana</option>
+                  <option value="Himachal Pradesh">Himachal Pradesh</option>
+                  <option value="Jharkhand">Jharkhand</option>
+                  <option value="Karnataka">Karnataka</option>
+                  <option value="Kerala">Kerala</option>
+                  <option value="Madhya Pradesh">Madhya Pradesh</option>
+                  <option value="Maharashtra">Maharashtra</option>
+                  <option value="Manipur">Manipur</option>
+                  <option value="Meghalaya">Meghalaya</option>
+                  <option value="Mizoram">Mizoram</option>
+                  <option value="Nagaland">Nagaland</option>
+                  <option value="Odisha">Odisha</option>
+                  <option value="Punjab">Punjab</option>
+                  <option value="Rajasthan">Rajasthan</option>
+                  <option value="Sikkim">Sikkim</option>
+                  <option value="Tamil Nadu">Tamil Nadu</option>
+                  <option value="Telangana">Telangana</option>
+                  <option value="Tripura">Tripura</option>
+                  <option value="Uttar Pradesh">Uttar Pradesh</option>
+                  <option value="Uttarakhand">Uttarakhand</option>
+                  <option value="West Bengal">West Bengal</option>
+                  <option value="Chandigarh">Chandigarh</option>
+                  <option value="Delhi">Delhi</option>
+                  <option value="Jammu and Kashmir">Jammu and Kashmir</option>
+                  <option value="Puducherry">Puducherry</option>
+                </select>
               </div>
             </div>
             <div className="form-row">
@@ -574,7 +737,54 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
               value={safe(formData.clientGSTN)}
               onChange={handleChange}
               placeholder="29ACBFA5366Q1ZR"
+              style={{ borderColor: clientGstnError ? '#ef4444' : '' }}
             />
+            {clientGstnError && <p style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem' }}>{clientGstnError}</p>}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="clientState">State *</label>
+            <select
+              id="clientState"
+              name="clientState"
+              value={safe(formData.clientState)}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Select State</option>
+              <option value="Andhra Pradesh">Andhra Pradesh</option>
+              <option value="Arunachal Pradesh">Arunachal Pradesh</option>
+              <option value="Assam">Assam</option>
+              <option value="Bihar">Bihar</option>
+              <option value="Chhattisgarh">Chhattisgarh</option>
+              <option value="Goa">Goa</option>
+              <option value="Gujarat">Gujarat</option>
+              <option value="Haryana">Haryana</option>
+              <option value="Himachal Pradesh">Himachal Pradesh</option>
+              <option value="Jharkhand">Jharkhand</option>
+              <option value="Karnataka">Karnataka</option>
+              <option value="Kerala">Kerala</option>
+              <option value="Madhya Pradesh">Madhya Pradesh</option>
+              <option value="Maharashtra">Maharashtra</option>
+              <option value="Manipur">Manipur</option>
+              <option value="Meghalaya">Meghalaya</option>
+              <option value="Mizoram">Mizoram</option>
+              <option value="Nagaland">Nagaland</option>
+              <option value="Odisha">Odisha</option>
+              <option value="Punjab">Punjab</option>
+              <option value="Rajasthan">Rajasthan</option>
+              <option value="Sikkim">Sikkim</option>
+              <option value="Tamil Nadu">Tamil Nadu</option>
+              <option value="Telangana">Telangana</option>
+              <option value="Tripura">Tripura</option>
+              <option value="Uttar Pradesh">Uttar Pradesh</option>
+              <option value="Uttarakhand">Uttarakhand</option>
+              <option value="West Bengal">West Bengal</option>
+              <option value="Chandigarh">Chandigarh</option>
+              <option value="Delhi">Delhi</option>
+              <option value="Jammu and Kashmir">Jammu and Kashmir</option>
+              <option value="Puducherry">Puducherry</option>
+            </select>
           </div>
 
           <div className="form-row">
@@ -694,10 +904,39 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
                   <tbody>
                     {formData.lineItems.map((item) => (
                       <tr key={item.id}>
-                        <td>{item.description}</td>
-                        <td>{item.hsnCode}</td>
-                        <td>{item.qty}</td>
-                        <td>{item.rate.toFixed(2)}</td>
+                        <td>
+                          <input
+                            type="text"
+                            value={item.description}
+                            onChange={(e) => updateLineItem(item.id, 'description', e.target.value)}
+                            style={{ width: '100%', padding: '4px', border: '1px solid #ddd', borderRadius: '4px' }}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={item.hsnCode}
+                            onChange={(e) => updateLineItem(item.id, 'hsnCode', e.target.value)}
+                            style={{ width: '80px', padding: '4px', border: '1px solid #ddd', borderRadius: '4px' }}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="number"
+                            value={item.qty}
+                            onChange={(e) => updateLineItem(item.id, 'qty', parseFloat(e.target.value) || 0)}
+                            style={{ width: '60px', padding: '4px', border: '1px solid #ddd', borderRadius: '4px' }}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="number"
+                            value={item.rate}
+                            onChange={(e) => updateLineItem(item.id, 'rate', parseFloat(e.target.value) || 0)}
+                            step="0.01"
+                            style={{ width: '80px', padding: '4px', border: '1px solid #ddd', borderRadius: '4px' }}
+                          />
+                        </td>
                         <td>{item.amount.toFixed(2)}</td>
                         <td>
                           <button

@@ -41,6 +41,7 @@ export async function initializeDatabase() {
         "clientName" TEXT NOT NULL,
         "clientAddress" TEXT DEFAULT '',
         "clientGSTN" TEXT DEFAULT '',
+        "clientState" TEXT DEFAULT '',
         "dcNumber" TEXT DEFAULT '',
         "poNumber" TEXT DEFAULT '',
         "goodsService" TEXT DEFAULT '',
@@ -56,6 +57,7 @@ export async function initializeDatabase() {
         "companyName" TEXT DEFAULT '',
         "companyAddress" TEXT DEFAULT '',
         "companyGSTN" TEXT DEFAULT '',
+        "companyState" TEXT DEFAULT '',
         "companyEmail" TEXT DEFAULT '',
         "roundOff" REAL DEFAULT 0,
         "bankName" TEXT DEFAULT '',
@@ -86,6 +88,7 @@ export async function initializeDatabase() {
         type TEXT DEFAULT 'Client',
         gstn TEXT DEFAULT '',
         address TEXT DEFAULT '',
+        state TEXT DEFAULT '',
         email TEXT DEFAULT '',
         "bankName" TEXT DEFAULT '',
         "bankBranch" TEXT DEFAULT '',
@@ -100,9 +103,21 @@ export async function initializeDatabase() {
         id TEXT PRIMARY KEY,
         name TEXT UNIQUE NOT NULL,
         "hsnCode" TEXT DEFAULT '',
-        description TEXT DEFAULT ''
+        description TEXT DEFAULT '',
+        taxRate REAL DEFAULT 18
       )
     `)
+
+    // Add new columns to existing tables (migration)
+    try {
+      await client.query(`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "clientState" TEXT DEFAULT ''`)
+      await client.query(`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "companyState" TEXT DEFAULT ''`)
+      await client.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS state TEXT DEFAULT ''`)
+      await client.query(`ALTER TABLE service_masters ADD COLUMN IF NOT EXISTS taxRate REAL DEFAULT 18`)
+      console.log('✓ Database migration completed')
+    } catch (error) {
+      console.log('✓ Migration columns already exist or error:', error.message)
+    }
 
     console.log('✓ All PostgreSQL tables ready')
   } finally {
@@ -219,27 +234,27 @@ export const invoiceDB = {
   async create(invoice) {
     try {
       const {
-        id, number, clientName, clientAddress, clientGSTN, dcNumber, poNumber,
+        id, number, clientName, clientAddress, clientGSTN, clientState, dcNumber, poNumber,
         goodsService, cgstRate, sgstRate, igstRate, dueDate, invoiceDate, status,
-        notes, createdAt, lineItems, companyName, companyAddress, companyGSTN,
+        notes, createdAt, lineItems, companyName, companyAddress, companyGSTN, companyState,
         companyEmail, roundOff, bankName, bankBranch, accountNo, ifscCode
       } = invoice
 
       await pool.query(
         `INSERT INTO invoices (
-          id, number, "clientName", "clientAddress", "clientGSTN", "dcNumber", "poNumber",
+          id, number, "clientName", "clientAddress", "clientGSTN", "clientState", "dcNumber", "poNumber",
           "goodsService", "cgstRate", "sgstRate", "igstRate", "dueDate", "invoiceDate", status,
-          notes, "createdAt", "updatedAt", "companyName", "companyAddress", "companyGSTN",
+          notes, "createdAt", "updatedAt", "companyName", "companyAddress", "companyGSTN", "companyState",
           "companyEmail", "roundOff", "bankName", "bankBranch", "accountNo", "ifscCode"
         ) VALUES (
-          $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26
+          $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28
         )`,
         [
-          id, number, clientName, clientAddress || '', clientGSTN || '', dcNumber || '', poNumber || '',
+          id, number, clientName, clientAddress || '', clientGSTN || '', clientState || '', dcNumber || '', poNumber || '',
           goodsService || '', cgstRate ?? 9, sgstRate ?? 9, igstRate ?? 0, dueDate,
           invoiceDate || null, status || 'Draft', notes || '', createdAt, createdAt,
-          companyName || '', companyAddress || '', companyGSTN || '', companyEmail || '',
-          typeof roundOff === 'number' ? roundOff : 0,
+          companyName || '', companyAddress || '', companyGSTN || '', companyState || '',
+          companyEmail || '', typeof roundOff === 'number' ? roundOff : 0,
           bankName || '', bankBranch || '', accountNo || '', ifscCode || ''
         ]
       )
@@ -260,26 +275,26 @@ export const invoiceDB = {
   async update(id, invoice) {
     try {
       const {
-        number, clientName, clientAddress, clientGSTN, dcNumber, poNumber,
+        number, clientName, clientAddress, clientGSTN, clientState, dcNumber, poNumber,
         goodsService, cgstRate, sgstRate, igstRate, dueDate, invoiceDate, status,
-        notes, lineItems, companyName, companyAddress, companyGSTN, companyEmail,
+        notes, lineItems, companyName, companyAddress, companyGSTN, companyState, companyEmail,
         roundOff, bankName, bankBranch, accountNo, ifscCode
       } = invoice
       const updatedAt = new Date().toISOString()
 
       await pool.query(
         `UPDATE invoices SET
-          number=$1, "clientName"=$2, "clientAddress"=$3, "clientGSTN"=$4, "dcNumber"=$5,
-          "poNumber"=$6, "goodsService"=$7, "cgstRate"=$8, "sgstRate"=$9, "igstRate"=$10,
-          "dueDate"=$11, "invoiceDate"=$12, status=$13, notes=$14, "updatedAt"=$15,
-          "companyName"=$16, "companyAddress"=$17, "companyGSTN"=$18, "companyEmail"=$19,
-          "roundOff"=$20, "bankName"=$21, "bankBranch"=$22, "accountNo"=$23, "ifscCode"=$24
-        WHERE id=$25`,
+          number=$1, "clientName"=$2, "clientAddress"=$3, "clientGSTN"=$4, "clientState"=$5, "dcNumber"=$6,
+          "poNumber"=$7, "goodsService"=$8, "cgstRate"=$9, "sgstRate"=$10, "igstRate"=$11,
+          "dueDate"=$12, "invoiceDate"=$13, status=$14, notes=$15, "updatedAt"=$16,
+          "companyName"=$17, "companyAddress"=$18, "companyGSTN"=$19, "companyState"=$20, "companyEmail"=$21,
+          "roundOff"=$22, "bankName"=$23, "bankBranch"=$24, "accountNo"=$25, "ifscCode"=$26
+        WHERE id=$27`,
         [
-          number, clientName, clientAddress || '', clientGSTN || '', dcNumber || '',
+          number, clientName, clientAddress || '', clientGSTN || '', clientState || '', dcNumber || '',
           poNumber || '', goodsService || '', cgstRate ?? 9, sgstRate ?? 9, igstRate ?? 0,
           dueDate, invoiceDate || null, status, notes || '', updatedAt,
-          companyName || '', companyAddress || '', companyGSTN || '', companyEmail || '',
+          companyName || '', companyAddress || '', companyGSTN || '', companyState || '', companyEmail || '',
           typeof roundOff === 'number' ? roundOff : 0,
           bankName || '', bankBranch || '', accountNo || '', ifscCode || '', id
         ]
@@ -349,12 +364,12 @@ export const companyDB = {
 
   async create(company) {
     try {
-      const { id, name, type, gstn, address, email, bankName, bankBranch, accountNo, ifscCode } = company
+      const { id, name, type, gstn, address, state, email, bankName, bankBranch, accountNo, ifscCode } = company
       const newId = id || Date.now().toString()
       await pool.query(
-        `INSERT INTO companies (id, name, type, gstn, address, email, "bankName", "bankBranch", "accountNo", "ifscCode")
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-        [newId, name, type || 'Client', gstn || '', address || '', email || '',
+        `INSERT INTO companies (id, name, type, gstn, address, state, email, "bankName", "bankBranch", "accountNo", "ifscCode")
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+        [newId, name, type || 'Client', gstn || '', address || '', state || '', email || '',
          bankName || '', bankBranch || '', accountNo || '', ifscCode || '']
       )
       return await this.getById(newId)
@@ -366,11 +381,11 @@ export const companyDB = {
 
   async update(id, company) {
     try {
-      const { name, type, gstn, address, email, bankName, bankBranch, accountNo, ifscCode } = company
+      const { name, type, gstn, address, state, email, bankName, bankBranch, accountNo, ifscCode } = company
       await pool.query(
-        `UPDATE companies SET name=$1, type=$2, gstn=$3, address=$4, email=$5,
-         "bankName"=$6, "bankBranch"=$7, "accountNo"=$8, "ifscCode"=$9 WHERE id=$10`,
-        [name, type || 'Client', gstn || '', address || '', email || '',
+        `UPDATE companies SET name=$1, type=$2, gstn=$3, address=$4, state=$5, email=$6,
+         "bankName"=$7, "bankBranch"=$8, "accountNo"=$9, "ifscCode"=$10 WHERE id=$11`,
+        [name, type || 'Client', gstn || '', address || '', state || '', email || '',
          bankName || '', bankBranch || '', accountNo || '', ifscCode || '', id]
       )
       return await this.getById(id)
@@ -415,11 +430,11 @@ export const serviceDB = {
 
   async create(service) {
     try {
-      const { id, name, hsnCode, description } = service
+      const { id, name, hsnCode, description, taxRate } = service
       const newId = id || Date.now().toString()
       await pool.query(
-        'INSERT INTO service_masters (id, name, "hsnCode", description) VALUES ($1,$2,$3,$4)',
-        [newId, name, hsnCode || '', description || '']
+        'INSERT INTO service_masters (id, name, "hsnCode", description, taxRate) VALUES ($1,$2,$3,$4,$5)',
+        [newId, name, hsnCode || '', description || '', taxRate ?? 18]
       )
       return await this.getById(newId)
     } catch (error) {
@@ -430,10 +445,10 @@ export const serviceDB = {
 
   async update(id, service) {
     try {
-      const { name, hsnCode, description } = service
+      const { name, hsnCode, description, taxRate } = service
       await pool.query(
-        'UPDATE service_masters SET name=$1, "hsnCode"=$2, description=$3 WHERE id=$4',
-        [name, hsnCode || '', description || '', id]
+        'UPDATE service_masters SET name=$1, "hsnCode"=$2, description=$3, taxRate=$4 WHERE id=$5',
+        [name, hsnCode || '', description || '', taxRate ?? 18, id]
       )
       return await this.getById(id)
     } catch (error) {

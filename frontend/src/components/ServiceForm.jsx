@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 
 function ServiceForm({ services = [], onSave, onDelete, onClose }) {
   const [serviceList, setServiceList] = useState(services)
-  const initialForm = { name: '', hsnCode: '', description: '' }
+  const initialForm = { name: '', hsnCode: '', rate: 0, unit: '', taxRate: 18, description: '' }
   const [form, setForm] = useState(initialForm)
 
   useEffect(() => {
@@ -65,7 +65,7 @@ function ServiceForm({ services = [], onSave, onDelete, onClose }) {
         >
           ×
         </button>
-        <h2>Manage Services</h2>
+        <h2>Manage HSN Services</h2>
         <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '1rem' }}>
           Define the types of services you provide.
         </p>
@@ -103,8 +103,24 @@ function ServiceForm({ services = [], onSave, onDelete, onClose }) {
               name="hsnCode" 
               value={form.hsnCode} 
               onChange={handleChange} 
-              placeholder="e.g. 9987" 
+              placeholder="e.g. 998311"
             />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="taxRate">Default Tax Rate (%)</label>
+            <select
+              id="taxRate"
+              name="taxRate"
+              value={form.taxRate}
+              onChange={handleChange}
+            >
+              <option value="0">0% - Exempt</option>
+              <option value="5">5%</option>
+              <option value="12">12%</option>
+              <option value="18">18%</option>
+              <option value="28">28%</option>
+            </select>
           </div>
 
           <div className="form-group">

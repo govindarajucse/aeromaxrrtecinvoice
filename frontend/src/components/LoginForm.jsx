@@ -60,7 +60,7 @@ function LoginForm({ onLogin }) {
       <div className="login-card">
         <div className="login-header">
           <div className="logo-circle">📋</div>
-          <h2>Invoice Manager</h2>
+          <h2>Invoice App</h2>
           <p>Sign in to manage your invoices</p>
         </div>
 

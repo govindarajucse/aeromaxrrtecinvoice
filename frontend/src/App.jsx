@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom'
 import InvoiceList from './components/InvoiceList'
 import InvoiceForm from './components/InvoiceForm'
@@ -16,6 +17,82 @@ export function formatINR(amount) {
   }).format(amount)
 }
 
+export function validateGSTIN(gstin) {
+  if (!gstin) return true
+  // GSTIN format: 15 characters, pattern: 2 digits + 13 characters
+  const gstinPattern = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/
+  return gstinPattern.test(gstin)
+}
+
+export function generateQRCodeData(invoice) {
+  // Generate QR code data for GST compliance
+  const qrData = {
+    gstin: invoice.companyGSTN,
+    invoiceNumber: invoice.number,
+    invoiceDate: invoice.invoiceDate,
+    invoiceValue: invoice.totalAmount,
+    hsnCode: invoice.lineItems?.[0]?.hsnCode || '',
+    taxAmount: invoice.totalTax
+  }
+  return JSON.stringify(qrData)
+}
+
+export function generateInvoiceNumber(lastInvoiceNumber, invoiceDate) {
+  // Generate invoice number with financial year (FY: April-March)
+  const date = new Date(invoiceDate)
+  const year = date.getFullYear()
+  const month = date.getMonth()
+  
+  // Financial year: April to March
+  const fyStart = month >= 3 ? year : year - 1
+  const fyEnd = month >= 3 ? year + 1 : year
+  const fyCode = `${fyStart.toString().slice(-2)}-${fyEnd.toString().slice(-2)}`
+  
+  // Extract last sequence number from previous invoice
+  let sequence = 1
+  if (lastInvoiceNumber) {
+    const match = lastInvoiceNumber.match(/INV\/\d{2}-\d{2}\/(\d+)/)
+    if (match) {
+      const lastSequence = parseInt(match[1])
+      sequence = lastSequence + 1
+    }
+  }
+  
+  // Ensure sequence is at least 1 and pad to 4 digits
+  sequence = Math.max(1, sequence)
+  const paddedSequence = sequence.toString().padStart(4, '0')
+  
+  return `INV/${fyCode}/${paddedSequence}`
+}
+
+export function generateDCNumber(lastDCNumber, invoiceDate) {
+  // Generate DC number with financial year (FY: April-March)
+  const date = new Date(invoiceDate)
+  const year = date.getFullYear()
+  const month = date.getMonth()
+  
+  // Financial year: April to March
+  const fyStart = month >= 3 ? year : year - 1
+  const fyEnd = month >= 3 ? year + 1 : year
+  const fyCode = `${fyStart.toString().slice(-2)}-${fyEnd.toString().slice(-2)}`
+  
+  // Extract last sequence number from previous DC
+  let sequence = 1
+  if (lastDCNumber) {
+    const match = lastDCNumber.match(/DC\/\d{2}-\d{2}\/(\d+)/)
+    if (match) {
+      const lastSequence = parseInt(match[1])
+      sequence = lastSequence + 1
+    }
+  }
+  
+  // Ensure sequence is at least 1 and pad to 4 digits
+  sequence = Math.max(1, sequence)
+  const paddedSequence = sequence.toString().padStart(4, '0')
+  
+  return `DC/${fyCode}/${paddedSequence}`
+}
+
 function App() {
   const [token, setToken] = useState(localStorage.getItem('auth_token'))
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('auth_user')))
@@ -26,7 +103,9 @@ function App() {
   const [error, setError] = useState(null)
   const [logoUrl, setLogoUrl] = useState(null)
   const [showLogoUpload, setShowLogoUpload] = useState(false)
-  const [companies, setCompanies] = useState([])
+  const [showLogoMenu, setShowLogoMenu] = useState(false)
+  const [logoPosition, setLogoPosition] = useState({ top: 0, left: 0 })
+  const logoContainerRef = React.useRef(null)
   const [showCompaniesModal, setShowCompaniesModal] = useState(false)
   const [services, setServices] = useState([])
   const [showServicesModal, setShowServicesModal] = useState(false)
@@ -57,6 +136,17 @@ function App() {
       fetchServices()
     }
   }, [token])
+
+  // Calculate logo position for menu
+  useEffect(() => {
+    if (showLogoMenu && logoContainerRef.current) {
+      const rect = logoContainerRef.current.getBoundingClientRect()
+      setLogoPosition({
+        top: rect.bottom + 8,
+        left: rect.left
+      })
+    }
+  }, [showLogoMenu])
 
   const handleLogin = (newToken, newUser) => {
     setToken(newToken)
@@ -314,26 +404,67 @@ function App() {
           <header className="app-header">
         <div className="header-content">
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            {logoUrl ? (
-              <img src={logoUrl} alt="Company Logo" className="company-logo" />
-            ) : (
-              <div className="logo-placeholder">📋</div>
-            )}
+            <div style={{ position: 'relative', overflow: 'visible' }} ref={logoContainerRef}>
+              <div 
+                className="logo-container"
+                onClick={() => setShowLogoMenu(!showLogoMenu)}
+                style={{ cursor: 'pointer' }}
+              >
+                {logoUrl ? (
+                  <img src={logoUrl} alt="Company Logo" className="company-logo" />
+                ) : (
+                  <div className="logo-placeholder">📋</div>
+                )}
+              </div>
+              {showLogoMenu && createPortal(
+                <div className="logo-menu" style={{
+                  position: 'fixed',
+                  top: logoPosition.top,
+                  left: logoPosition.left,
+                  zIndex: 10000
+                }}>
+                  <button
+                    className="logo-menu-option"
+                    onClick={() => {
+                      setShowLogoMenu(false)
+                      setShowLogoUpload(true)
+                    }}
+                  >
+                    📁 Change Logo
+                  </button>
+                  {logoUrl && (
+                    <button
+                      className="logo-menu-option"
+                      onClick={async () => {
+                        setShowLogoMenu(false)
+                        try {
+                          await authFetch(`${API_URL}/logo`, { method: 'DELETE' })
+                          setLogoUrl(null)
+                          alert('Logo removed successfully!')
+                        } catch (err) {
+                          alert('Error removing logo: ' + err.message)
+                        }
+                      }}
+                    >
+                      🗑️ Remove Logo
+                    </button>
+                  )}
+                </div>,
+                document.body
+              )}
+            </div>
             <div>
-              <h1>{'Invoice Manager'}</h1>
+              <h1>{'Invoice App'}</h1>
             </div>
           </div>
           <div className="header-actions" style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
-            <Link to="/" className="btn btn-secondary nav-link" style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}>
-              📊 Dashboard
-            </Link>
             <button 
               className="btn btn-secondary"
               onClick={() => setShowServicesModal(true)}
-              title="Manage Services"
+              title="Manage HSN Codes"
               style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}
             >
-              🛠️ Services
+              🛠️ HSN
             </button>
             <button 
               className="btn btn-secondary"
@@ -342,14 +473,6 @@ function App() {
               style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}
             >
               📊 Report
-            </button>
-            <button 
-              className="btn btn-secondary"
-              onClick={() => setShowLogoUpload(!showLogoUpload)}
-              title={logoUrl ? "Change logo" : "Upload logo"}
-              style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}
-            >
-              📁 Upload Logo
             </button>
             <button 
               className="btn btn-secondary"
@@ -373,7 +496,7 @@ function App() {
         </div>
 
         {showLogoUpload && (
-          <div className="logo-upload-container" style={{ position: 'relative' }}>
+          <div className="logo-upload-container" style={{ position: 'relative', paddingRight: '80px' }}>
             <button
               type="button"
               aria-label="Close"

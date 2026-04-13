@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react'
+import { validateGSTIN } from '../App'
 
 function CompanyForm({ companies = [], onSave, onDelete, onClose }) {
   const [companyList, setCompanyList] = useState(companies)
-  const initialForm = { name: '', type: 'Client', gstn: '', address: '', email: '', bankName: '', bankBranch: '', accountNo: '', ifscCode: '' }
+  const initialForm = { name: '', type: 'Client', gstn: '', address: '', state: '', email: '', bankName: '', bankBranch: '', accountNo: '', ifscCode: '' }
   const [form, setForm] = useState(initialForm)
+  const [gstinError, setGstinError] = useState('')
 
   useEffect(() => {
     setCompanyList(companies)
@@ -12,6 +14,14 @@ function CompanyForm({ companies = [], onSave, onDelete, onClose }) {
   const handleChange = e => {
     const { name, value } = e.target
     setForm(prev => ({ ...prev, [name]: value }))
+    
+    if (name === 'gstn') {
+      if (value && !validateGSTIN(value)) {
+        setGstinError('Invalid GSTIN format. Must be 15 characters (e.g., 22AAAAA0000A1Z5)')
+      } else {
+        setGstinError('')
+      }
+    }
   }
 
   const handleSelect = e => {
@@ -96,7 +106,53 @@ function CompanyForm({ companies = [], onSave, onDelete, onClose }) {
             </div>
             <div className="form-group">
               <label htmlFor="gstn">GSTN</label>
-              <input type="text" id="gstn" name="gstn" value={form.gstn} onChange={handleChange} />
+              <input 
+                type="text" 
+                id="gstn" 
+                name="gstn" 
+                value={form.gstn} 
+                onChange={handleChange}
+                style={{ borderColor: gstinError ? '#ef4444' : '' }}
+              />
+              {gstinError && <p style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem' }}>{gstinError}</p>}
+            </div>
+            <div className="form-group">
+              <label htmlFor="state">State</label>
+              <select id="state" name="state" value={form.state || ''} onChange={handleChange}>
+                <option value="">Select State</option>
+                <option value="Andhra Pradesh">Andhra Pradesh</option>
+                <option value="Arunachal Pradesh">Arunachal Pradesh</option>
+                <option value="Assam">Assam</option>
+                <option value="Bihar">Bihar</option>
+                <option value="Chhattisgarh">Chhattisgarh</option>
+                <option value="Goa">Goa</option>
+                <option value="Gujarat">Gujarat</option>
+                <option value="Haryana">Haryana</option>
+                <option value="Himachal Pradesh">Himachal Pradesh</option>
+                <option value="Jharkhand">Jharkhand</option>
+                <option value="Karnataka">Karnataka</option>
+                <option value="Kerala">Kerala</option>
+                <option value="Madhya Pradesh">Madhya Pradesh</option>
+                <option value="Maharashtra">Maharashtra</option>
+                <option value="Manipur">Manipur</option>
+                <option value="Meghalaya">Meghalaya</option>
+                <option value="Mizoram">Mizoram</option>
+                <option value="Nagaland">Nagaland</option>
+                <option value="Odisha">Odisha</option>
+                <option value="Punjab">Punjab</option>
+                <option value="Rajasthan">Rajasthan</option>
+                <option value="Sikkim">Sikkim</option>
+                <option value="Tamil Nadu">Tamil Nadu</option>
+                <option value="Telangana">Telangana</option>
+                <option value="Tripura">Tripura</option>
+                <option value="Uttar Pradesh">Uttar Pradesh</option>
+                <option value="Uttarakhand">Uttarakhand</option>
+                <option value="West Bengal">West Bengal</option>
+                <option value="Chandigarh">Chandigarh</option>
+                <option value="Delhi">Delhi</option>
+                <option value="Jammu and Kashmir">Jammu and Kashmir</option>
+                <option value="Puducherry">Puducherry</option>
+              </select>
             </div>
             <div className="form-group">
               <label htmlFor="email">Email</label>
