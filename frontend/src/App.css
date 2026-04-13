@@ -553,6 +553,12 @@ body {
 }
 
 /* Invoice Table Styles */
+.invoice-list {
+  background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+  padding: 1.5rem;
+  border-radius: 12px;
+}
+
 .invoices-table {
   width: 100%;
   border-collapse: collapse;

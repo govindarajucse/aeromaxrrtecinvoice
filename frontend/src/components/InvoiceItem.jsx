@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 
 function ConfirmModal({ open, onConfirm, onCancel, message }) {
   if (!open) return null;
@@ -38,8 +38,24 @@ function InvoiceItem({ invoice, token, onEdit, onDelete, onStatusChange }) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showNotes, setShowNotes] = useState(false)
   const [downloading, setDownloading] = useState(null)
-  const [showExportMenu, setShowExportMenu] = useState(false)
   const [showActionMenu, setShowActionMenu] = useState(false)
+  const actionMenuRef = useRef(null)
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (actionMenuRef.current && !actionMenuRef.current.contains(event.target)) {
+        setShowActionMenu(false)
+      }
+    }
+
+    if (showActionMenu) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showActionMenu])
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -155,7 +171,7 @@ function InvoiceItem({ invoice, token, onEdit, onDelete, onStatusChange }) {
               ⋮
             </button>
             {showActionMenu && (
-              <div className="action-menu" style={{ position: 'absolute', right: 0, zIndex: 10, background: '#fff', border: '1px solid #ccc', borderRadius: 4, minWidth: 100 }}>
+              <div ref={actionMenuRef} className="action-menu" style={{ position: 'absolute', right: 0, zIndex: 100, background: '#fff', border: '1px solid #ccc', borderRadius: 4, minWidth: 100 }}>
                 <button
                   className="action-option"
                   onClick={() => {
@@ -200,37 +216,25 @@ function InvoiceItem({ invoice, token, onEdit, onDelete, onStatusChange }) {
               </div>
             )}
           </div>
-          <div className="export-menu-container">
+          <div style={{ display: 'inline-flex', gap: '4px', marginLeft: '8px' }}>
             <button
               className="btn-icon"
-              title="Export"
-              onClick={() => setShowExportMenu(!showExportMenu)}
+              title="Export PDF"
+              disabled={downloading === 'pdf'}
+              onClick={() => handleDownload('pdf')}
+              style={{ cursor: downloading === 'pdf' ? 'not-allowed' : 'pointer' }}
             >
-              {downloading ? '⏳' : '📥'}
+              {downloading === 'pdf' ? '⏳' : '📕'}
             </button>
-            {showExportMenu && (
-              <div className="export-menu">
-                <button
-                  className="export-option"
-                  disabled={downloading === 'pdf'}
-                  onClick={() => {
-                    handleDownload('pdf')
-                    setShowExportMenu(false)
-                  }}
-                >
-                  📕 PDF                </button>
-                <button
-                  className="export-option"
-                  disabled={downloading === 'excel'}
-                  onClick={() => {
-                    handleDownload('excel')
-                    setShowExportMenu(false)
-                  }}
-                >
-                  📊 Excel
-                </button>
-              </div>
-            )}
+            <button
+              className="btn-icon"
+              title="Export Excel"
+              disabled={downloading === 'excel'}
+              onClick={() => handleDownload('excel')}
+              style={{ cursor: downloading === 'excel' ? 'not-allowed' : 'pointer' }}
+            >
+              {downloading === 'excel' ? '⏳' : '📊'}
+            </button>
           </div>
         </td>
       </tr>

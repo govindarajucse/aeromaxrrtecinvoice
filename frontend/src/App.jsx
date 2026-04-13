@@ -97,6 +97,7 @@ function App() {
   const [token, setToken] = useState(localStorage.getItem('auth_token'))
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('auth_user')))
   const [invoices, setInvoices] = useState([])
+  const [companies, setCompanies] = useState([])
   const [showForm, setShowForm] = useState(false)
   const [editingInvoice, setEditingInvoice] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -458,6 +459,14 @@ function App() {
             </div>
           </div>
           <div className="header-actions" style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
+            <button 
+              className="btn btn-secondary"
+              onClick={() => setShowCompaniesModal(true)}
+              title="Manage Companies"
+              style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}
+            >
+              🏢 Companies
+            </button>
             <button 
               className="btn btn-secondary"
               onClick={() => setShowServicesModal(true)}

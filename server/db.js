@@ -88,7 +88,7 @@ export async function initializeDatabase() {
         type TEXT DEFAULT 'Client',
         gstn TEXT DEFAULT '',
         address TEXT DEFAULT '',
-        state TEXT DEFAULT '',
+        "state" TEXT DEFAULT '',
         email TEXT DEFAULT '',
         "bankName" TEXT DEFAULT '',
         "bankBranch" TEXT DEFAULT '',
@@ -112,7 +112,7 @@ export async function initializeDatabase() {
     try {
       await client.query(`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "clientState" TEXT DEFAULT ''`)
       await client.query(`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "companyState" TEXT DEFAULT ''`)
-      await client.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS state TEXT DEFAULT ''`)
+      await client.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS "state" TEXT DEFAULT ''`)
       await client.query(`ALTER TABLE service_masters ADD COLUMN IF NOT EXISTS taxRate REAL DEFAULT 18`)
       console.log('✓ Database migration completed')
     } catch (error) {
@@ -367,7 +367,7 @@ export const companyDB = {
       const { id, name, type, gstn, address, state, email, bankName, bankBranch, accountNo, ifscCode } = company
       const newId = id || Date.now().toString()
       await pool.query(
-        `INSERT INTO companies (id, name, type, gstn, address, state, email, "bankName", "bankBranch", "accountNo", "ifscCode")
+        `INSERT INTO companies (id, name, type, gstn, address, "state", email, "bankName", "bankBranch", "accountNo", "ifscCode")
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
         [newId, name, type || 'Client', gstn || '', address || '', state || '', email || '',
          bankName || '', bankBranch || '', accountNo || '', ifscCode || '']
@@ -383,7 +383,7 @@ export const companyDB = {
     try {
       const { name, type, gstn, address, state, email, bankName, bankBranch, accountNo, ifscCode } = company
       await pool.query(
-        `UPDATE companies SET name=$1, type=$2, gstn=$3, address=$4, state=$5, email=$6,
+        `UPDATE companies SET name=$1, type=$2, gstn=$3, address=$4, "state"=$5, email=$6,
          "bankName"=$7, "bankBranch"=$8, "accountNo"=$9, "ifscCode"=$10 WHERE id=$11`,
         [name, type || 'Client', gstn || '', address || '', state || '', email || '',
          bankName || '', bankBranch || '', accountNo || '', ifscCode || '', id]
