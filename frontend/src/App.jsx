@@ -320,7 +320,7 @@ function App() {
               <div className="logo-placeholder">📋</div>
             )}
             <div>
-              <h1>{companies.length > 0 ? `${companies[0].name} ` : 'Invoice Manager'}</h1>
+              <h1>{'Invoice Manager'}</h1>
             </div>
           </div>
           <div className="header-actions" style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>

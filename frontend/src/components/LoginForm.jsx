@@ -60,7 +60,7 @@ function LoginForm({ onLogin }) {
       <div className="login-card">
         <div className="login-header">
           <div className="logo-circle">📋</div>
-          <h2>AeromaxRR Tec</h2>
+          <h2>Invoice Manager</h2>
           <p>Sign in to manage your invoices</p>
         </div>
 
@@ -98,8 +98,8 @@ function LoginForm({ onLogin }) {
         </form>
 
         <div className="login-footer">
-          <p>© {new Date().getFullYear()} AeromaxRR Tec</p>
-          <p style={{ opacity: 0.3, fontSize: '10px' }}>V 1.0.11</p>
+          <p>© {new Date().getFullYear()} Invoice App</p>
+          <p style={{ opacity: 0.3, fontSize: '10px' }}>V 1.0.14</p>
         </div>
       </div>
 
