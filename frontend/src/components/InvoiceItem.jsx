@@ -38,24 +38,6 @@ function InvoiceItem({ invoice, token, onEdit, onDelete, onStatusChange }) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showNotes, setShowNotes] = useState(false)
   const [downloading, setDownloading] = useState(null)
-  const [showActionMenu, setShowActionMenu] = useState(false)
-  const actionMenuRef = useRef(null)
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (actionMenuRef.current && !actionMenuRef.current.contains(event.target)) {
-        setShowActionMenu(false)
-      }
-    }
-
-    if (showActionMenu) {
-      document.addEventListener('mousedown', handleClickOutside)
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [showActionMenu])
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -162,61 +144,40 @@ function InvoiceItem({ invoice, token, onEdit, onDelete, onStatusChange }) {
           </select>
         </td>
         <td className="actions-cell">
-          <div className="action-menu-container" style={{ position: 'relative', display: 'inline-block' }}>
+          <div style={{ display: 'inline-flex', gap: '4px', alignItems: 'center' }}>
             <button
               className="btn-icon"
-              title="Actions"
-              onClick={() => setShowActionMenu((v) => !v)}
+              title="Edit"
+              onClick={() => onEdit(invoice)}
             >
-              ⋮
+              ✏️
             </button>
-            {showActionMenu && (
-              <div ref={actionMenuRef} className="action-menu" style={{ position: 'absolute', right: 0, zIndex: 100, background: '#fff', border: '1px solid #ccc', borderRadius: 4, minWidth: 100 }}>
-                <button
-                  className="action-option"
-                  onClick={() => {
-                    setShowActionMenu(false);
-                    onEdit(invoice);
-                  }}
-                  style={{ width: '100%', textAlign: 'left', padding: '6px 12px', border: 'none', background: 'none', cursor: 'pointer' }}
-                >
-                  ✏️ Edit
-                </button>
-                <button
-                  className="action-option"
-                  onClick={() => {
-                    setShowActionMenu(false);
-                    setShowDeleteModal(true);
-                  }}
-                  style={{ width: '100%', textAlign: 'left', padding: '6px 12px', border: 'none', background: 'none', cursor: 'pointer', color: '#c00' }}
-                >
-                  🗑️ Delete
-                </button>
-                <ConfirmModal
-                  open={showDeleteModal}
-                  message={`Are you sure you want to delete invoice ${invoice.number}?`}
-                  onCancel={() => setShowDeleteModal(false)}
-                  onConfirm={() => {
-                    setShowDeleteModal(false);
-                    onDelete(invoice.id);
-                  }}
-                />
-                {invoice.notes && (
-                  <button
-                    className="action-option"
-                    onClick={() => {
-                      setShowActionMenu(false);
-                      setShowNotes((v) => !v);
-                    }}
-                    style={{ width: '100%', textAlign: 'left', padding: '6px 12px', border: 'none', background: 'none', cursor: 'pointer' }}
-                  >
-                    📝 Notes
-                  </button>
-                )}
-              </div>
+            <button
+              className="btn-icon"
+              title="Delete"
+              onClick={() => setShowDeleteModal(true)}
+              style={{ color: '#c00' }}
+            >
+              🗑️
+            </button>
+            <ConfirmModal
+              open={showDeleteModal}
+              message={`Are you sure you want to delete invoice ${invoice.number}?`}
+              onCancel={() => setShowDeleteModal(false)}
+              onConfirm={() => {
+                setShowDeleteModal(false);
+                onDelete(invoice.id);
+              }}
+            />
+            {invoice.notes && (
+              <button
+                className="btn-icon"
+                title="Notes"
+                onClick={() => setShowNotes((v) => !v)}
+              >
+                📝
+              </button>
             )}
-          </div>
-          <div style={{ display: 'inline-flex', gap: '4px', marginLeft: '8px' }}>
             <button
               className="btn-icon"
               title="Export PDF"
