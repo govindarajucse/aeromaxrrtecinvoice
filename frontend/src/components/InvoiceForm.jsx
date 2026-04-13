@@ -14,7 +14,7 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
   const [allInvoices, setAllInvoices] = useState([])
   const [activeTab, setActiveTab] = useState('owncompany')
 
-  const tabs = ['owncompany', 'client', 'invoice', 'lineitems', 'status']
+  const tabs = ['owncompany', 'client', 'invoice', 'products', 'status']
 
   const handlePreviousTab = () => {
     const currentIndex = tabs.indexOf(activeTab)
@@ -30,8 +30,8 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
       case 'client':
         return 'Next: Invoice Details'
       case 'invoice':
-        return 'Next: Line Items'
-      case 'lineitems':
+        return 'Next: Products'
+      case 'products':
         return 'Next: Status'
       case 'status':
         return invoice ? 'Update Invoice' : 'Create Invoice'
@@ -65,7 +65,7 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
     return errors
   }
 
-  const validateLineItemsTab = () => {
+  const validateProductsTab = () => {
     const errors = []
     if (formData.lineItems.length === 0) errors.push('At least one line item')
     return errors
@@ -76,12 +76,12 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
     const ownCompanyErrors = validateOwnCompanyTab()
     const clientErrors = validateClientTab()
     const invoiceErrors = validateInvoiceTab()
-    const lineItemsErrors = validateLineItemsTab()
+    const productsErrors = validateProductsTab()
 
     if (ownCompanyErrors.length > 0) errors.push(...ownCompanyErrors.map(e => `Own Company - ${e}`))
     if (clientErrors.length > 0) errors.push(...clientErrors.map(e => `Client Details - ${e}`))
     if (invoiceErrors.length > 0) errors.push(...invoiceErrors.map(e => `Invoice Details - ${e}`))
-    if (lineItemsErrors.length > 0) errors.push(...lineItemsErrors.map(e => `Line Items - ${e}`))
+    if (productsErrors.length > 0) errors.push(...productsErrors.map(e => `Products - ${e}`))
 
     return errors
   }
@@ -99,7 +99,7 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
       case 'invoice':
         errors = validateInvoiceTab()
         break
-      case 'lineitems':
+      case 'products':
         // Don't validate when navigating to Status tab
         break
       default:
@@ -553,27 +553,27 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
           </button>
           <button
             type="button"
-            className={`tab-btn ${activeTab === 'lineitems' ? 'active' : ''}`}
+            className={`tab-btn ${activeTab === 'products' ? 'active' : ''}`}
             onClick={() => {
               const errors = validateInvoiceTab()
               if (errors.length > 0) {
                 alert(`Please fill in the following mandatory fields:\n${errors.join('\n')}`)
                 return
               }
-              setActiveTab('lineitems')
+              setActiveTab('products')
             }}
             style={{
               padding: '0.75rem 1.5rem',
               border: 'none',
-              background: activeTab === 'lineitems' ? '#7c3aed' : 'transparent',
-              color: activeTab === 'lineitems' ? '#fff' : '#64748b',
+              background: activeTab === 'products' ? '#7c3aed' : 'transparent',
+              color: activeTab === 'products' ? '#fff' : '#64748b',
               cursor: 'pointer',
               fontWeight: '600',
-              borderBottom: activeTab === 'lineitems' ? '3px solid #7c3aed' : 'none',
+              borderBottom: activeTab === 'products' ? '3px solid #7c3aed' : 'none',
               marginBottom: '-2px'
             }}
           >
-            Line Items
+            Products
           </button>
           <button
             type="button"
@@ -597,7 +597,7 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
         <form id="invoice-form" onSubmit={handleSubmit}>
           {activeTab === 'owncompany' && (
             <fieldset style={{ border: '1px solid #ccc', marginBottom: 16, padding: 12 }}>
-              <legend>Own Company Details</legend>
+              <legend style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Own Company Details</legend>
               <div className="form-row">
                 <div className="form-group">
                   <label htmlFor="companyDropdown">Select Company</label>
@@ -761,7 +761,7 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
           )}
           {activeTab === 'client' && (
             <fieldset style={{ border: '1px solid #ccc', marginBottom: 16, padding: 12 }}>
-              <legend>Client Details</legend>
+              <legend style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Client Details</legend>
               <div className="form-row">
                 <div className="form-group">
                   <label htmlFor="clientSelect">Select Existing Client (Optional)</label>
@@ -883,7 +883,7 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
           )}
           {activeTab === 'invoice' && (
             <fieldset style={{ border: '1px solid #ccc', marginBottom: 16, padding: 12 }}>
-              <legend>Invoice Details</legend>
+              <legend style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Invoice Details</legend>
               <div className="form-row">
                 <div className="form-group">
                   <label htmlFor="number">Invoice Number *</label>
@@ -1007,9 +1007,9 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
               </div>
             </fieldset>
           )}
-          {activeTab === 'lineitems' && (
+          {activeTab === 'products' && (
             <fieldset style={{ border: '1px solid #ccc', marginBottom: 16, padding: 12 }}>
-              <legend>Line Items</legend>
+              <legend style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Products</legend>
               <div className="line-items-section">
                 <div className="line-item-form">
                   <div className="form-group small">
@@ -1174,7 +1174,7 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
           )}
           {activeTab === 'status' && (
             <fieldset style={{ border: '1px solid #ccc', marginBottom: 16, padding: 12 }}>
-              <legend>Status</legend>
+              <legend style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Status</legend>
               <div className="form-group">
                 <label htmlFor="status">Status</label>
                 <select
