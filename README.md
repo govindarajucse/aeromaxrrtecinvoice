@@ -91,6 +91,17 @@ Notes:
 - The first server run seeds the admin user automatically.
 - In production, use a strong `JWT_SECRET` and secure PostgreSQL credentials.
 
+## Database Migration Scripts
+
+Cross-database migration scripts are available in the server migration pack:
+
+- PostgreSQL script in `server/migrations/postgresql/001_init_aeromaxrrtecinvoicedb.sql`
+- MySQL script in `server/migrations/mysql/001_init_aeromaxrrtecinvoicedb.sql`
+- SQLite script in `server/migrations/sqlite/001_init_aeromaxrrtecinvoicedb.sql`
+- SQL Server script in `server/migrations/sqlserver/001_init_aeromaxrrtecinvoicedb.sql`
+
+See `server/migrations/README.md` for run commands and compatibility notes.
+
 ## Installation
 
 Install root dependencies:
@@ -332,3 +343,4 @@ Check:
 
 - See `QUICKSTART.md` for a shorter startup guide.
 - See `server/SECURITY_SETUP.md` for credential and secret setup guidance.
+- See `server/migrations/README.md` for database migration scripts across supported engines.
