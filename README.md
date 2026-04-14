@@ -1,4 +1,4 @@
-# AEROMAXRR TEC Invoice Manager
+# Invoice Manager App
 
 Full-stack invoice management system for creating GST-style invoices, maintaining company and service masters, exporting documents, and managing access through authenticated sessions.
 
