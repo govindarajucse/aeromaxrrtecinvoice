@@ -11,37 +11,62 @@ export default function Dashboard({ token, invoices, onEdit, onDelete, onStatusC
       Paid: 0,
       Overdue: 0
     }
-    
+
     let totalAmount = 0
     let totalPaid = 0
-    
+
+    // Group invoices by month
+    const monthlyAmounts = {}
+
     invoices.forEach(invoice => {
       const status = invoice.status || 'Draft'
       statusCounts[status] = (statusCounts[status] || 0) + 1
-      
+
       const amount = parseFloat(invoice.roundOff || 0)
       totalAmount += amount
-      
+
       if (status === 'Paid') {
         totalPaid += amount
       }
+
+      // Group by month
+      if (invoice.invoiceDate) {
+        const date = new Date(invoice.invoiceDate)
+        const monthKey = date.toLocaleString('en-IN', { month: 'short', year: 'numeric' })
+        monthlyAmounts[monthKey] = (monthlyAmounts[monthKey] || 0) + amount
+      }
     })
-    
-    // Prepare pie chart data
-    const pieData = Object.entries(statusCounts)
+
+    // Prepare status pie chart data
+    const statusPieData = Object.entries(statusCounts)
       .filter(([_, count]) => count > 0)
       .map(([status, count]) => ({
         name: status,
         value: count
       }))
-    
+
+    // Prepare monthly revenue pie chart data
+    const monthlyPieData = Object.entries(monthlyAmounts)
+      .sort((a, b) => {
+        // Sort by date (most recent first)
+        const dateA = new Date(a[0])
+        const dateB = new Date(b[0])
+        return dateB - dateA
+      })
+      .map(([month, amount]) => ({
+        name: month,
+        value: amount
+      }))
+
     return {
       totalInvoices: invoices.length,
       totalAmount,
       totalPaid,
       statusCounts,
-      pieData,
-      pendingAmount: totalAmount - totalPaid
+      statusPieData,
+      monthlyPieData,
+      pendingAmount: totalAmount - totalPaid,
+      monthlyAmounts
     }
   }, [invoices])
 
@@ -53,7 +78,14 @@ export default function Dashboard({ token, invoices, onEdit, onDelete, onStatusC
     Overdue: '#ef4444'
   }
 
-  const pieColors = stats.pieData.map(item => statusColors[item.name])
+  // Colors for months
+  const monthColors = [
+    '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+    '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1'
+  ]
+
+  const statusPieColors = stats.statusPieData.map(item => statusColors[item.name])
+  const monthlyPieColors = stats.monthlyPieData.map((_, index) => monthColors[index % monthColors.length])
 
   return (
     <div className="page-content">
@@ -81,54 +113,110 @@ export default function Dashboard({ token, invoices, onEdit, onDelete, onStatusC
           </div>
         </div>
 
-        {/* Pie Chart and Status Breakdown */}
-        {stats.pieData.length > 0 && (
+        {/* Pie Charts */}
+        {(stats.statusPieData.length > 0 || stats.monthlyPieData.length > 0) && (
           <div className="dashboard-charts">
-            <div className="chart-container">
-              <h3>Invoices by Status</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={stats.pieData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, value }) => `${name}: ${value}`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {stats.pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={pieColors[index]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => `${value} invoices`} />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Status Details */}
-            <div className="status-details">
-              <h3>Status Breakdown</h3>
-              <div className="status-list">
-                {Object.entries(stats.statusCounts).map(([status, count]) => (
-                  count > 0 && (
-                    <div key={status} className="status-item">
-                      <div className="status-indicator" style={{ backgroundColor: statusColors[status] }}></div>
-                      <div className="status-info">
-                        <span className="status-name">{status}</span>
-                        <span className="status-count">{count} invoice{count !== 1 ? 's' : ''}</span>
-                      </div>
-                    </div>
-                  )
-                ))}
+            {/* Status Pie Chart */}
+            {stats.statusPieData.length > 0 && (
+              <div className="chart-container">
+                <h3>Invoices by Status</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={stats.statusPieData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, value }) => `${name}: ${value}`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {stats.statusPieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={statusPieColors[index]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => `${value} invoices`} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
+            )}
+
+            {/* Monthly Revenue Pie Chart */}
+            {stats.monthlyPieData.length > 0 && (
+              <div className="chart-container">
+                <h3>Revenue by Month</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={stats.monthlyPieData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, value }) => `${name}: ₹${value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {stats.monthlyPieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={monthlyPieColors[index]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => `₹${value.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Status Breakdown */}
+        {stats.statusPieData.length > 0 && (
+          <div className="status-details">
+            <h3>Status Breakdown</h3>
+            <div className="status-list">
+              {Object.entries(stats.statusCounts).map(([status, count]) => (
+                count > 0 && (
+                  <div key={status} className="status-item">
+                    <div className="status-indicator" style={{ backgroundColor: statusColors[status] }}></div>
+                    <div className="status-info">
+                      <span className="status-name">{status}</span>
+                      <span className="status-count">{count} invoice{count !== 1 ? 's' : ''}</span>
+                    </div>
+                  </div>
+                )
+              ))}
             </div>
           </div>
         )}
 
-        {stats.pieData.length === 0 && (
+        {/* Monthly Breakdown */}
+        {stats.monthlyPieData.length > 0 && (
+          <div className="status-details">
+            <h3>Monthly Breakdown</h3>
+            <div className="status-list">
+              {Object.entries(stats.monthlyAmounts)
+                .sort((a, b) => {
+                  const dateA = new Date(a[0])
+                  const dateB = new Date(b[0])
+                  return dateB - dateA
+                })
+                .map(([month, amount], index) => (
+                  <div key={month} className="status-item">
+                    <div className="status-indicator" style={{ backgroundColor: monthColors[index % monthColors.length] }}></div>
+                    <div className="status-info">
+                      <span className="status-name">{month}</span>
+                      <span className="status-count">₹{amount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+
+        {stats.statusPieData.length === 0 && stats.monthlyPieData.length === 0 && (
           <div className="empty-message">
             <p>No invoices to display. Create your first invoice to see statistics.</p>
           </div>
