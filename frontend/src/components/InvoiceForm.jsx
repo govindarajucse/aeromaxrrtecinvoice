@@ -765,27 +765,33 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
               <div className="form-row">
                 <div className="form-group">
                   <label htmlFor="clientSelect">Select Existing Client (Optional)</label>
-                  <select
-                    id="clientSelect"
-                    className="client-select"
-                    onChange={(e) => {
-                      const client = companies.find(c => c.name === e.target.value)
-                      if (client) {
-                        setFormData(prev => ({
-                          ...prev,
-                          clientName: client.name,
-                          clientAddress: client.address,
-                          clientGSTN: client.gstn,
-                          clientState: client.state || ''
-                        }))
-                      }
-                    }}
-                  >
-                    <option value="">-- Choose Client --</option>
-                    {companies.filter(c => c.type === 'Client').map(c => (
-                      <option key={c.id || c.name} value={c.name}>{c.name}</option>
-                    ))}
-                  </select>
+                  {invoice && formData.clientName ? (
+                    <div style={{ padding: '0.5rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', color: '#64748b' }}>
+                      {formData.clientName}
+                    </div>
+                  ) : (
+                    <select
+                      id="clientSelect"
+                      className="client-select"
+                      onChange={(e) => {
+                        const client = companies.find(c => c.name === e.target.value)
+                        if (client) {
+                          setFormData(prev => ({
+                            ...prev,
+                            clientName: client.name,
+                            clientAddress: client.address,
+                            clientGSTN: client.gstn,
+                            clientState: client.state || ''
+                          }))
+                        }
+                      }}
+                    >
+                      <option value="">-- Choose Client --</option>
+                      {companies.filter(c => c.type === 'Client').map(c => (
+                        <option key={c.id || c.name} value={c.name}>{c.name}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               </div>
               <div className="form-row">
@@ -797,6 +803,7 @@ function InvoiceForm({ invoice, token, onSubmit, onCancel }) {
                   <label htmlFor="clientAddress">Client Address *</label>
                   <textarea
                     id="clientAddress"
+                    style={{ minHeight: '80px' }}
                     name="clientAddress"
                     value={safe(formData.clientAddress)}
                     onChange={handleChange}

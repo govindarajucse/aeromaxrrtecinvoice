@@ -15,7 +15,7 @@ export default function Invoices({ token, invoices, onEdit, onDelete, onStatusCh
     let totalAmount = 0
     let totalPaid = 0
 
-    // Group invoices by month
+    // Group invoices by month (only paid invoices)
     const monthlyAmounts = {}
 
     invoices.forEach(invoice => {
@@ -27,13 +27,13 @@ export default function Invoices({ token, invoices, onEdit, onDelete, onStatusCh
 
       if (status === 'Paid') {
         totalPaid += amount
-      }
 
-      // Group by month
-      if (invoice.invoiceDate) {
-        const date = new Date(invoice.invoiceDate)
-        const monthKey = date.toLocaleString('en-IN', { month: 'short', year: 'numeric' })
-        monthlyAmounts[monthKey] = (monthlyAmounts[monthKey] || 0) + amount
+        // Group by month only for paid invoices
+        if (invoice.invoiceDate) {
+          const date = new Date(invoice.invoiceDate)
+          const monthKey = date.toLocaleString('en-IN', { month: 'short', year: 'numeric' })
+          monthlyAmounts[monthKey] = (monthlyAmounts[monthKey] || 0) + amount
+        }
       }
     })
 
