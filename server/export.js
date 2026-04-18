@@ -221,7 +221,7 @@ export function generatePDF(invoice) {
       doc.moveTo(margin, y).lineTo(margin + contentWidth, y).stroke();
 
       // Items
-      doc.fontSize(9).font('Helvetica');
+      doc.fontSize(9).font('Helvetica-Bold');
       let subTotal = 0;
       let totalQty = 0;
       let itemCount = invoice.lineItems && invoice.lineItems.length ? invoice.lineItems.length : 0;
@@ -333,7 +333,7 @@ export function generatePDF(invoice) {
           doc.restore();
           doc.font('Helvetica-Bold').fillColor('#000');
         } else {
-          doc.font('Helvetica').fillColor('#000');
+          doc.font('Helvetica-Bold').fillColor('#000');
         }
         // Label
         doc.fontSize(9).text(
@@ -344,7 +344,7 @@ export function generatePDF(invoice) {
         );
         // Value
         let valStr = isNaN(Number(totals[i][1])) ? totals[i][1] : Number(totals[i][1]).toLocaleString('en-IN', { minimumFractionDigits: 2 });
-        doc.font(isGrandTotal ? 'Helvetica-Bold' : 'Helvetica').fontSize(9).text(
+        doc.font('Helvetica-Bold').fontSize(9).text(
           valStr,
           margin + leftBlockW + rightBlockW * 0.45 + 6,
           totalsY + 4,

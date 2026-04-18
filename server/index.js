@@ -419,9 +419,12 @@ app.get('/api/invoices/:id/export/pdf', authenticateToken, async (req, res) => {
   try {
     const invoice = await invoiceDB.getById(req.params.id)
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' })
+    console.log('Invoice data for PDF export:', { id: invoice.id, number: invoice.number, companyName: invoice.companyName })
     const pdfBuffer = await generatePDF(invoice)
+    const companyName = (invoice.companyName || '').replace(/[^a-zA-Z0-9]/g, '_')
+    console.log('Generated filename for PDF:', companyName)
     res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', `attachment; filename="Invoice-${invoice.number}.pdf"`)
+    res.setHeader('Content-Disposition', `attachment; filename="${companyName}_Invoice-${invoice.number}.pdf"`)
     res.send(pdfBuffer)
   } catch (error) {
     res.status(500).json({ error: error.message })
@@ -432,9 +435,12 @@ app.get('/api/invoices/:id/export/excel', authenticateToken, async (req, res) =>
   try {
     const invoice = await invoiceDB.getById(req.params.id)
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' })
+    console.log('Invoice data for Excel export:', { id: invoice.id, number: invoice.number, companyName: invoice.companyName })
     const excelBuffer = await generateExcel(invoice)
+    const companyName = (invoice.companyName || '').replace(/[^a-zA-Z0-9]/g, '_')
+    console.log('Generated filename for Excel:', companyName)
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    res.setHeader('Content-Disposition', `attachment; filename="Invoice-${invoice.number}.xlsx"`)
+    res.setHeader('Content-Disposition', `attachment; filename="${companyName}_Invoice-${invoice.number}.xlsx"`)
     res.send(excelBuffer)
   } catch (error) {
     res.status(500).json({ error: error.message })
